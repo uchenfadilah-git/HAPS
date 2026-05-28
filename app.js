@@ -153,7 +153,7 @@ function normalizeCostFromSales(salesRows) {
       husein: partnerShare,
       total,
     };
-  });
+  }).filter(r => r.code && r.code !== "-" && r.total > 0);
 }
 
 function filteredRows() {
