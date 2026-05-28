@@ -3,24 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>eBay Sales Dashboard</title>
+  <title>HB Autopartshop Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="shell">
     <nav class="top-nav" aria-label="Menu utama">
-      <a href="#dashboard" class="nav-link active" data-page-link="dashboard">Dashboard</a>
-      <a href="#profit-share" class="nav-link" data-page-link="profit-share">Pembagian Profit</a>
+      <a href="#dashboard" class="brand-mark" data-page-link="dashboard" aria-label="HB Autopartshop dashboard"><img src="assets/logo.png" alt="HB Autopartshop" /></a>
+      <div class="nav-menu">
+        <a href="#dashboard" class="nav-link active" data-page-link="dashboard">Dashboard</a>
+        <a href="#profit-share" class="nav-link" data-page-link="profit-share">Pembagian Profit</a>
+        <a href="#cost-share" class="nav-link" data-page-link="cost-share">Pembagian Cost</a>
+      </div>
     </nav>
 
     <section class="hero">
-      <div>
-        <p class="eyebrow">Live dari Google Sheet</p>
-        <h1>eBay Profit Dashboard</h1>
-        <p class="subtitle">Input tetap di Google Sheet, hasil penjualan dan profit langsung kebaca di sini.</p>
+      <div class="hero-copy">
+        <p class="eyebrow">eBay Store Control Panel</p>
+        <h1>HB Autopartshop</h1>
+        <p class="subtitle">Auto parts & accessories dashboard buat pantau selling, profit, cost, dan pembagian partner dari Google Sheet.</p>
       </div>
       <div class="hero-card">
         <span>Status data</span>
@@ -94,6 +98,39 @@
         </div>
         <p class="subtitle">Halaman khusus buat lihat pembagian profit partner dari data yang sedang terfilter.</p>
         <div id="shareCards" class="share-cards"></div>
+      </section>
+    </section>
+
+    <section id="costSharePage" class="page-view">
+      <section class="metrics cost-metrics" aria-label="Ringkasan cost">
+        <article class="metric accent"><span>Total Buying</span><strong id="totalBuyingCost">IDR 0</strong><small>Modal barang</small></article>
+        <article class="metric"><span>Total Delivery</span><strong id="totalDeliveryCost">IDR 0</strong><small>Kurasi / ongkir</small></article>
+        <article class="metric"><span>Total Cost</span><strong id="totalCost">IDR 0</strong><small>Buying + delivery</small></article>
+        <article class="metric"><span>Per Partner</span><strong id="partnerCostAvg">IDR 0</strong><small>Rata-rata beban</small></article>
+      </section>
+
+      <section class="panel share-panel">
+        <div class="panel-head">
+          <div><p class="eyebrow">Cost Share</p><h2>Pembagian Cost Partner</h2></div>
+          <span id="costBase" class="pill">Dari sheet COST</span>
+        </div>
+        <div id="costCards" class="share-cards"></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-head">
+          <div><p class="eyebrow">Detail</p><h2>Table Cost</h2></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Transaction</th><th>Tracking</th><th>Buying</th><th>Delivery</th><th>Yusuf</th><th>Shafi</th><th>Husein</th><th>Total Cost</th>
+              </tr>
+            </thead>
+            <tbody id="costTable"></tbody>
+          </table>
+        </div>
       </section>
     </section>
   </main>

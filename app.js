@@ -1,12 +1,16 @@
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1QY6xEU_ppaR8zZNg44hHJ8OH4w7n-GWO/gviz/tq?tqx=out:csv";
+const SHEET_BASE_URL = "https://docs.google.com/spreadsheets/d/1QY6xEU_ppaR8zZNg44hHJ8OH4w7n-GWO/gviz/tq?tqx=out:csv";
+const REKAP_CSV_URL = `${SHEET_BASE_URL}&sheet=REKAP`;
+const COST_CSV_URL = `${SHEET_BASE_URL}&sheet=COST`;
 
 let rows = [];
+let costRows = [];
 const SHARE_SPLIT = [
   { name: "Husein", percent: 30 },
   { name: "Shafi", percent: 30 },
   { name: "Yusuf", percent: 30 },
   { name: "Bebas", percent: 10 },
 ];
+const COST_PARTNERS = ["Yusuf", "Shafi", "Husein"];
 const USD_TO_IDR = 16500;
 
 const els = {
@@ -18,6 +22,7 @@ const els = {
   navLinks: document.querySelectorAll("[data-page-link]"),
   dashboardPage: document.querySelector("#dashboardPage"),
   profitSharePage: document.querySelector("#profitSharePage"),
+  costSharePage: document.querySelector("#costSharePage"),
   selling: document.querySelector("#totalSelling"),
   profit: document.querySelector("#netProfit"),
   orders: document.querySelector("#totalOrders"),
@@ -27,6 +32,13 @@ const els = {
   chart: document.querySelector("#monthlyChart"),
   topItems: document.querySelector("#topItems"),
   table: document.querySelector("#salesTable"),
+  totalBuyingCost: document.querySelector("#totalBuyingCost"),
+  totalDeliveryCost: document.querySelector("#totalDeliveryCost"),
+  totalCost: document.querySelector("#totalCost"),
+  partnerCostAvg: document.querySelector("#partnerCostAvg"),
+  costBase: document.querySelector("#costBase"),
+  costCards: document.querySelector("#costCards"),
+  costTable: document.querySelector("#costTable"),
   refresh: document.querySelector("#refreshBtn"),
 };
 
@@ -62,7 +74,7 @@ function parseCSV(text) {
 }
 
 function toNumber(value) {
-  if (!value) return 0;
+  if (!value || String(value).trim() === "-") return 0;
   const cleaned = String(value)
     .replace(/IDR|USD|Rp|\s/g, "")
     .replace(/\./g, "")
@@ -97,9 +109,12 @@ function monthKey(date) {
 
 function normalizeData(csv) {
   const [header, ...data] = parseCSV(csv);
-  return data.filter(r => r.length > 5 && r[0]).map(r => {
+  return data.filter(r => r.length > 5 && r[0] && r[0].trim() !== "-").map(r => {
     const rec = Object.fromEntries(header.map((key, index) => [key.trim(), (r[index] || "").trim()]));
     const date = toDate(rec.Date);
+    const buying = toNumber(rec["Total Buying"] || rec["Buying Price"]);
+    const delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
+    const profit = toNumber(rec.Profit);
     return {
       no: rec.No,
       date,
@@ -112,14 +127,36 @@ function normalizeData(csv) {
       rate: toNumber(rec["Rate Selling"]),
       sellingUsd: toNumber(rec["Selling Price"]),
       totalSelling: toNumber(rec["Total Selling"]),
-      buying: toNumber(rec["Total Buying"] || rec["Buying Price"]),
-      buyingUsd: toNumber(rec["Total Buying"] || rec["Buying Price"]) / USD_TO_IDR,
-      delivery: toNumber(rec["Delivery Cost (Kurasi)"]),
-      deliveryUsd: toNumber(rec["Delivery Cost (Kurasi)"]) / USD_TO_IDR,
+      buying,
+      buyingUsd: buying / USD_TO_IDR,
+      delivery,
+      deliveryUsd: delivery / USD_TO_IDR,
       tracking: rec["Tracking Code"],
-      profit: toNumber(rec.Profit),
-      profitUsd: toNumber(rec.Profit) / USD_TO_IDR,
+      profit,
+      profitUsd: profit / USD_TO_IDR,
       month: monthKey(date),
+    };
+  });
+}
+
+function normalizeCostData(csv) {
+  const [header, ...data] = parseCSV(csv);
+  return data.filter(r => r.length > 5 && r[0] && r[0].trim() !== "-").map(r => {
+    const rec = Object.fromEntries(header.map((key, index) => [key.trim(), (r[index] || "").trim()]));
+    const buying = toNumber(rec["Total Buying"] || rec["Buying Price"]);
+    const delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
+    const yusuf = toNumber(rec.Yusuf) + toNumber(rec.Yusuf2);
+    const shafi = toNumber(rec.Shafi) + toNumber(rec.Shafi3);
+    const husein = toNumber(rec.Husein) + toNumber(rec.Husein4);
+    return {
+      code: rec["Transaction Code"],
+      tracking: rec["Tracking Code"],
+      buying,
+      delivery,
+      yusuf,
+      shafi,
+      husein,
+      total: buying + delivery,
     };
   });
 }
@@ -132,6 +169,11 @@ function filteredRows() {
     const haystack = `${r.item} ${r.buyer} ${r.tracking} ${r.code} ${r.country}`.toLowerCase();
     return matchMonth && matchCountry && (!q || haystack.includes(q));
   });
+}
+
+function filteredCostRows() {
+  const codes = new Set(filteredRows().map(r => r.code));
+  return costRows.filter(r => codes.has(r.code));
 }
 
 function fillFilters() {
@@ -150,10 +192,10 @@ function render() {
   els.orders.textContent = data.length.toLocaleString("id-ID");
   els.margin.textContent = totalSelling ? `${((totalProfit / totalSelling) * 100).toFixed(1)}%` : "0%";
   renderShares(totalProfit);
-
   renderChart(data);
   renderTopItems(data);
   renderTable(data);
+  renderCost(filteredCostRows());
 }
 
 function renderShares(totalProfit) {
@@ -170,6 +212,46 @@ function renderShares(totalProfit) {
         <em>${share.percent}%</em>
       </article>`;
   }).join("");
+}
+
+function renderCost(data) {
+  const totals = data.reduce((acc, r) => {
+    acc.buying += r.buying;
+    acc.delivery += r.delivery;
+    acc.yusuf += r.yusuf;
+    acc.shafi += r.shafi;
+    acc.husein += r.husein;
+    return acc;
+  }, { buying: 0, delivery: 0, yusuf: 0, shafi: 0, husein: 0 });
+  const grandTotal = totals.buying + totals.delivery;
+  els.totalBuyingCost.textContent = money(totals.buying);
+  els.totalDeliveryCost.textContent = money(totals.delivery);
+  els.totalCost.textContent = money(grandTotal);
+  els.partnerCostAvg.textContent = money(grandTotal / 3);
+  els.costBase.textContent = `${data.length} transaksi dari sheet COST`;
+  els.costCards.innerHTML = COST_PARTNERS.map(name => {
+    const amount = totals[name.toLowerCase()];
+    return `
+      <article class="share-card">
+        <div>
+          <span>${name}</span>
+          <strong>${money(amount)}</strong>
+          <small>${dollar(amount / USD_TO_IDR)}</small>
+        </div>
+        <em>Cost</em>
+      </article>`;
+  }).join("");
+  els.costTable.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.code}</td>
+      <td>${r.tracking}</td>
+      <td>${moneyPair(r.buying)}</td>
+      <td>${moneyPair(r.delivery)}</td>
+      <td>${moneyPair(r.yusuf)}</td>
+      <td>${moneyPair(r.shafi)}</td>
+      <td>${moneyPair(r.husein)}</td>
+      <td>${moneyPair(r.total)}</td>
+    </tr>`).join("") || '<tr><td colspan="8">Data cost belum ada.</td></tr>';
 }
 
 function renderChart(data) {
@@ -210,35 +292,40 @@ function renderTable(data) {
     </tr>`).join("");
 }
 
+async function fetchCsv(url) {
+  const res = await fetch(`${url}&cacheBust=${Date.now()}`);
+  if (!res.ok) throw new Error(`Google Sheet tidak bisa dibaca (${res.status})`);
+  return res.text();
+}
+
 async function loadData() {
   els.status.textContent = "Mengambil data";
-  const url = `${SHEET_CSV_URL}&cacheBust=${Date.now()}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Google Sheet tidak bisa dibaca (${res.status})`);
-  rows = normalizeData(await res.text());
+  const [rekapCsv, costCsv] = await Promise.all([fetchCsv(REKAP_CSV_URL), fetchCsv(COST_CSV_URL)]);
+  rows = normalizeData(rekapCsv);
+  costRows = normalizeCostData(costCsv);
   fillFilters();
   render();
-  els.status.textContent = `${rows.length} rows loaded`;
+  els.status.textContent = `${rows.length} sales / ${costRows.length} cost rows`;
   els.updated.textContent = `Update: ${new Date().toLocaleString("id-ID")}`;
 }
 
 function setPage(page) {
-  const isShare = page === "profit-share";
-  els.dashboardPage.classList.toggle("active", !isShare);
-  els.profitSharePage.classList.toggle("active", isShare);
+  els.dashboardPage.classList.toggle("active", page === "dashboard");
+  els.profitSharePage.classList.toggle("active", page === "profit-share");
+  els.costSharePage.classList.toggle("active", page === "cost-share");
   els.navLinks.forEach(link => link.classList.toggle("active", link.dataset.pageLink === page));
 }
 
 els.navLinks.forEach(link => link.addEventListener("click", event => {
   event.preventDefault();
   const page = link.dataset.pageLink;
-  history.replaceState(null, "", page === "profit-share" ? "#profit-share" : "#dashboard");
+  history.replaceState(null, "", `#${page}`);
   setPage(page);
 }));
 
 [els.month, els.country, els.search].forEach(el => el.addEventListener("input", render));
 els.refresh.addEventListener("click", () => loadData().catch(showError));
-setPage(location.hash === "#profit-share" ? "profit-share" : "dashboard");
+setPage(["#profit-share", "#cost-share"].includes(location.hash) ? location.hash.slice(1) : "dashboard");
 
 function showError(error) {
   console.error(error);

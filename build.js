@@ -9,4 +9,6 @@ for (const file of ['index.html', 'styles.css', 'app.js']) {
   fs.copyFileSync(path.join(__dirname, file), path.join(outDir, file));
 }
 
+fs.cpSync(path.join(__dirname, 'assets'), path.join(outDir, 'assets'), { recursive: true });
+
 console.log('Static dashboard copied to public/');
