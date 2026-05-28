@@ -195,7 +195,7 @@ function render() {
   renderChart(data);
   renderTopItems(data);
   renderTable(data);
-  renderCost(filteredCostRows());
+  renderCost(costRows);
 }
 
 function renderShares(totalProfit) {
