@@ -23,6 +23,10 @@ const els = {
   dashboardPage: document.querySelector("#dashboardPage"),
   profitSharePage: document.querySelector("#profitSharePage"),
   costSharePage: document.querySelector("#costSharePage"),
+  cashflowPage: document.querySelector("#cashflowPage"),
+  problemsPage: document.querySelector("#problemsPage"),
+  itemsPage: document.querySelector("#itemsPage"),
+  reportsPage: document.querySelector("#reportsPage"),
   selling: document.querySelector("#totalSelling"),
   profit: document.querySelector("#netProfit"),
   orders: document.querySelector("#totalOrders"),
@@ -39,6 +43,19 @@ const els = {
   costBase: document.querySelector("#costBase"),
   costCards: document.querySelector("#costCards"),
   costTable: document.querySelector("#costTable"),
+  cashIn: document.querySelector("#cashIn"),
+  cashOut: document.querySelector("#cashOut"),
+  netCash: document.querySelector("#netCash"),
+  avgRate: document.querySelector("#avgRate"),
+  cashflowList: document.querySelector("#cashflowList"),
+  lossOrders: document.querySelector("#lossOrders"),
+  totalLoss: document.querySelector("#totalLoss"),
+  highDelivery: document.querySelector("#highDelivery"),
+  lowMargin: document.querySelector("#lowMargin"),
+  problemList: document.querySelector("#problemList"),
+  itemInsights: document.querySelector("#itemInsights"),
+  reportSummary: document.querySelector("#reportSummary"),
+  printReport: document.querySelector("#printReportBtn"),
   refresh: document.querySelector("#refreshBtn"),
 };
 
@@ -191,6 +208,10 @@ function render() {
   renderTopItems(data);
   renderTable(data);
   renderCost(costRows);
+  renderCashflow(data);
+  renderProblems(data);
+  renderItemInsights(data);
+  renderReport(data);
 }
 
 function renderShares(totalProfit) {
@@ -247,6 +268,83 @@ function renderCost(data) {
       <td data-label="Husein Share">${moneyPair(r.husein)}</td>
       <td data-label="Total Cost">${moneyPair(r.total)}</td>
     </tr>`).join("") || '<tr><td colspan="8">Data cost belum ada.</td></tr>';
+}
+
+
+function renderCashflow(data) {
+  const cashIn = data.reduce((sum, r) => sum + r.totalSelling, 0);
+  const cashOut = data.reduce((sum, r) => sum + r.buying + r.delivery, 0);
+  const rates = data.map(r => r.rate).filter(Boolean);
+  const avgRate = rates.length ? rates.reduce((sum, rate) => sum + rate, 0) / rates.length : USD_TO_IDR;
+  els.cashIn.textContent = money(cashIn);
+  els.cashOut.textContent = money(cashOut);
+  els.netCash.textContent = money(cashIn - cashOut);
+  els.avgRate.textContent = Math.round(avgRate).toLocaleString("id-ID");
+  els.cashflowList.innerHTML = data.map(r => {
+    const out = r.buying + r.delivery;
+    const net = r.totalSelling - out;
+    return `<div class="rank-item split-item">
+      <strong>${r.code} - ${r.buyer || "Buyer"}</strong>
+      <span>In ${money(r.totalSelling)} / Out ${money(out)} / Net ${money(net)}</span>
+    </div>`;
+  }).join("") || '<p class="subtitle">Data belum ada.</p>';
+}
+
+function renderProblems(data) {
+  const loss = data.filter(r => r.profit < 0);
+  const highDelivery = data.filter(r => r.totalSelling && r.delivery / r.totalSelling > 0.35);
+  const lowMargin = data.filter(r => r.totalSelling && r.profit >= 0 && r.profit / r.totalSelling < 0.15);
+  const problemRows = [...new Map([...loss, ...highDelivery, ...lowMargin].map(r => [r.code, r])).values()];
+  els.lossOrders.textContent = loss.length.toLocaleString("id-ID");
+  els.totalLoss.textContent = money(Math.abs(loss.reduce((sum, r) => sum + r.profit, 0)));
+  els.highDelivery.textContent = highDelivery.length.toLocaleString("id-ID");
+  els.lowMargin.textContent = lowMargin.length.toLocaleString("id-ID");
+  els.problemList.innerHTML = problemRows.map(r => {
+    const flags = [];
+    if (r.profit < 0) flags.push("Profit minus");
+    if (r.totalSelling && r.delivery / r.totalSelling > 0.35) flags.push("Delivery tinggi");
+    if (r.totalSelling && r.profit >= 0 && r.profit / r.totalSelling < 0.15) flags.push("Margin rendah");
+    return `<div class="rank-item split-item danger-item">
+      <strong>${r.code} - ${r.item}</strong>
+      <span>${flags.join(" / ")} | Profit ${money(r.profit)} | Delivery ${money(r.delivery)}</span>
+    </div>`;
+  }).join("") || '<p class="subtitle">Belum ada transaksi bermasalah dari filter ini.</p>';
+}
+
+function renderItemInsights(data) {
+  const grouped = new Map();
+  data.forEach(r => {
+    const current = grouped.get(r.item) || { item: r.item, orders: 0, qty: 0, selling: 0, profit: 0, delivery: 0 };
+    current.orders += 1;
+    current.qty += r.qty;
+    current.selling += r.totalSelling;
+    current.profit += r.profit;
+    current.delivery += r.delivery;
+    grouped.set(r.item, current);
+  });
+  const insights = [...grouped.values()].sort((a, b) => b.profit - a.profit);
+  els.itemInsights.innerHTML = insights.map(item => {
+    const margin = item.selling ? `${((item.profit / item.selling) * 100).toFixed(1)}%` : "0%";
+    return `<div class="rank-item split-item">
+      <strong>${item.item}</strong>
+      <span>${item.orders} order / Qty ${item.qty} / Profit ${money(item.profit)} / Margin ${margin} / Delivery ${money(item.delivery)}</span>
+    </div>`;
+  }).join("") || '<p class="subtitle">Data item belum ada.</p>';
+}
+
+function renderReport(data) {
+  const totalSelling = data.reduce((sum, r) => sum + r.totalSelling, 0);
+  const totalProfit = data.reduce((sum, r) => sum + r.profit, 0);
+  const totalCost = data.reduce((sum, r) => sum + r.buying + r.delivery, 0);
+  const monthLabel = els.month.value === "all" ? "Semua bulan" : els.month.value;
+  const countryLabel = els.country.value === "all" ? "Semua negara" : els.country.value;
+  els.reportSummary.innerHTML = `
+    <div class="report-line"><span>Periode</span><strong>${monthLabel}</strong></div>
+    <div class="report-line"><span>Negara</span><strong>${countryLabel}</strong></div>
+    <div class="report-line"><span>Total Order</span><strong>${data.length.toLocaleString("id-ID")}</strong></div>
+    <div class="report-line"><span>Total Selling</span><strong>${money(totalSelling)}</strong></div>
+    <div class="report-line"><span>Total Cost</span><strong>${money(totalCost)}</strong></div>
+    <div class="report-line"><span>Net Profit</span><strong>${money(totalProfit)}</strong></div>`;
 }
 
 function renderChart(data) {
@@ -308,6 +406,10 @@ function setPage(page) {
   els.dashboardPage.classList.toggle("active", page === "dashboard");
   els.profitSharePage.classList.toggle("active", page === "profit-share");
   els.costSharePage.classList.toggle("active", page === "cost-share");
+  els.cashflowPage.classList.toggle("active", page === "cashflow");
+  els.problemsPage.classList.toggle("active", page === "problems");
+  els.itemsPage.classList.toggle("active", page === "items");
+  els.reportsPage.classList.toggle("active", page === "reports");
   els.navLinks.forEach(link => link.classList.toggle("active", link.dataset.pageLink === page));
 }
 
@@ -320,7 +422,9 @@ els.navLinks.forEach(link => link.addEventListener("click", event => {
 
 [els.month, els.country, els.search].forEach(el => el.addEventListener("input", render));
 els.refresh.addEventListener("click", () => loadData().catch(showError));
-setPage(["#profit-share", "#cost-share"].includes(location.hash) ? location.hash.slice(1) : "dashboard");
+const validPages = ["#profit-share", "#cost-share", "#cashflow", "#problems", "#items", "#reports"];
+setPage(validPages.includes(location.hash) ? location.hash.slice(1) : "dashboard");
+els.printReport.addEventListener("click", () => window.print());
 
 function showError(error) {
   console.error(error);

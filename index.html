@@ -17,6 +17,10 @@
         <a href="#dashboard" class="nav-link active" data-page-link="dashboard">Dashboard</a>
         <a href="#profit-share" class="nav-link" data-page-link="profit-share">Pembagian Profit</a>
         <a href="#cost-share" class="nav-link" data-page-link="cost-share">Pembagian Cost</a>
+        <a href="#cashflow" class="nav-link" data-page-link="cashflow">Cashflow</a>
+        <a href="#problems" class="nav-link" data-page-link="problems">Problem/Loss</a>
+        <a href="#items" class="nav-link" data-page-link="items">Item Insight</a>
+        <a href="#reports" class="nav-link" data-page-link="reports">Report</a>
       </div>
     </nav>
 
@@ -132,6 +136,50 @@
             <tbody id="costTable"></tbody>
           </table>
         </div>
+      </section>
+    </section>
+
+
+    <section id="cashflowPage" class="page-view">
+      <section class="metrics" aria-label="Cashflow summary">
+        <article class="metric accent"><span>Cash In</span><strong id="cashIn">IDR 0</strong><small>Total selling</small></article>
+        <article class="metric"><span>Cash Out</span><strong id="cashOut">IDR 0</strong><small>Buying + delivery</small></article>
+        <article class="metric"><span>Net Cash</span><strong id="netCash">IDR 0</strong><small>Cash in - cash out</small></article>
+        <article class="metric"><span>Avg Rate</span><strong id="avgRate">0</strong><small>Kurs dari sheet</small></article>
+      </section>
+      <section class="panel table-panel">
+        <div class="panel-head"><div><p class="eyebrow">Cashflow</p><h2>Arus Kas Transaksi</h2></div></div>
+        <div id="cashflowList" class="rank-list"></div>
+      </section>
+    </section>
+
+    <section id="problemsPage" class="page-view">
+      <section class="metrics" aria-label="Problem summary">
+        <article class="metric accent"><span>Loss Orders</span><strong id="lossOrders">0</strong><small>Profit minus</small></article>
+        <article class="metric"><span>Total Loss</span><strong id="totalLoss">IDR 0</strong><small>Akumulasi rugi</small></article>
+        <article class="metric"><span>High Delivery</span><strong id="highDelivery">0</strong><small>Delivery tinggi</small></article>
+        <article class="metric"><span>Low Margin</span><strong id="lowMargin">0</strong><small>Margin di bawah 15%</small></article>
+      </section>
+      <section class="panel table-panel">
+        <div class="panel-head"><div><p class="eyebrow">Risk Watch</p><h2>Problem / Loss</h2></div></div>
+        <div id="problemList" class="rank-list"></div>
+      </section>
+    </section>
+
+    <section id="itemsPage" class="page-view">
+      <section class="panel table-panel">
+        <div class="panel-head"><div><p class="eyebrow">Product Intelligence</p><h2>Item Insight</h2></div></div>
+        <div id="itemInsights" class="rank-list"></div>
+      </section>
+    </section>
+
+    <section id="reportsPage" class="page-view">
+      <section class="panel table-panel report-card">
+        <div class="panel-head">
+          <div><p class="eyebrow">Monthly Report</p><h2>Report Bulanan</h2></div>
+          <button id="printReportBtn" type="button">Print / Save PDF</button>
+        </div>
+        <div id="reportSummary" class="report-summary"></div>
       </section>
     </section>
   </main>
