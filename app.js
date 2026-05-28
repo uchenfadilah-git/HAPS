@@ -335,16 +335,47 @@ function renderItemInsights(data) {
 function renderReport(data) {
   const totalSelling = data.reduce((sum, r) => sum + r.totalSelling, 0);
   const totalProfit = data.reduce((sum, r) => sum + r.profit, 0);
-  const totalCost = data.reduce((sum, r) => sum + r.buying + r.delivery, 0);
+  const totalBuying = data.reduce((sum, r) => sum + r.buying, 0);
+  const totalDelivery = data.reduce((sum, r) => sum + r.delivery, 0);
+  const totalCost = totalBuying + totalDelivery;
+  const margin = totalSelling ? `${((totalProfit / totalSelling) * 100).toFixed(1)}%` : "0%";
   const monthLabel = els.month.value === "all" ? "Semua bulan" : els.month.value;
   const countryLabel = els.country.value === "all" ? "Semua negara" : els.country.value;
+  const topItems = [...data]
+    .sort((a, b) => b.profit - a.profit)
+    .slice(0, 5)
+    .map((r, index) => `<tr><td>${index + 1}</td><td>${r.item}</td><td>${r.buyer}</td><td>${money(r.totalSelling)}</td><td>${money(r.profit)}</td></tr>`)
+    .join("") || '<tr><td colspan="5">Data belum ada.</td></tr>';
+  const shareRows = SHARE_SPLIT.map(share => {
+    const amount = totalProfit * share.percent / 100;
+    return `<tr><td>${share.name}</td><td>${share.percent}%</td><td>${money(amount)}</td></tr>`;
+  }).join("");
+
   els.reportSummary.innerHTML = `
-    <div class="report-line"><span>Periode</span><strong>${monthLabel}</strong></div>
-    <div class="report-line"><span>Negara</span><strong>${countryLabel}</strong></div>
-    <div class="report-line"><span>Total Order</span><strong>${data.length.toLocaleString("id-ID")}</strong></div>
-    <div class="report-line"><span>Total Selling</span><strong>${money(totalSelling)}</strong></div>
-    <div class="report-line"><span>Total Cost</span><strong>${money(totalCost)}</strong></div>
-    <div class="report-line"><span>Net Profit</span><strong>${money(totalProfit)}</strong></div>`;
+    <div class="report-cover">
+      <img src="assets/logo.png" alt="HB Autopartshop" />
+      <div>
+        <p class="eyebrow">Monthly Business Report</p>
+        <h2>HB Autopartshop</h2>
+        <span>${monthLabel} / ${countryLabel} / ${new Date().toLocaleDateString("id-ID")}</span>
+      </div>
+    </div>
+    <div class="report-grid">
+      <div class="report-tile"><span>Total Order</span><strong>${data.length.toLocaleString("id-ID")}</strong></div>
+      <div class="report-tile"><span>Total Selling</span><strong>${money(totalSelling)}</strong></div>
+      <div class="report-tile"><span>Total Cost</span><strong>${money(totalCost)}</strong></div>
+      <div class="report-tile"><span>Net Profit</span><strong>${money(totalProfit)}</strong></div>
+      <div class="report-tile"><span>Margin</span><strong>${margin}</strong></div>
+      <div class="report-tile"><span>Buying / Delivery</span><strong>${money(totalBuying)} / ${money(totalDelivery)}</strong></div>
+    </div>
+    <div class="report-section">
+      <h3>Profit Share</h3>
+      <table class="report-table"><thead><tr><th>Partner</th><th>Percent</th><th>Amount</th></tr></thead><tbody>${shareRows}</tbody></table>
+    </div>
+    <div class="report-section">
+      <h3>Top Profit Transactions</h3>
+      <table class="report-table"><thead><tr><th>#</th><th>Item</th><th>Buyer</th><th>Selling</th><th>Profit</th></tr></thead><tbody>${topItems}</tbody></table>
+    </div>`;
 }
 
 function renderChart(data) {
