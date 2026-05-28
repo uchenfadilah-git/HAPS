@@ -1,6 +1,12 @@
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1QY6xEU_ppaR8zZNg44hHJ8OH4w7n-GWO/gviz/tq?tqx=out:csv";
 
 let rows = [];
+const SHARE_SPLIT = [
+  { name: "Husein", percent: 30 },
+  { name: "Shafi", percent: 30 },
+  { name: "Yusuf", percent: 30 },
+  { name: "Bebas", percent: 10 },
+];
 
 const els = {
   status: document.querySelector("#dataStatus"),
@@ -8,10 +14,13 @@ const els = {
   month: document.querySelector("#monthFilter"),
   country: document.querySelector("#countryFilter"),
   search: document.querySelector("#searchInput"),
+  shareFilter: document.querySelector("#shareFilter"),
   selling: document.querySelector("#totalSelling"),
   profit: document.querySelector("#netProfit"),
   orders: document.querySelector("#totalOrders"),
   margin: document.querySelector("#margin"),
+  shareBase: document.querySelector("#shareBase"),
+  shareCards: document.querySelector("#shareCards"),
   chart: document.querySelector("#monthlyChart"),
   topItems: document.querySelector("#topItems"),
   table: document.querySelector("#salesTable"),
@@ -126,10 +135,28 @@ function render() {
   els.profit.textContent = money(totalProfit);
   els.orders.textContent = data.length.toLocaleString("id-ID");
   els.margin.textContent = totalSelling ? `${((totalProfit / totalSelling) * 100).toFixed(1)}%` : "0%";
+  renderShares(totalProfit);
 
   renderChart(data);
   renderTopItems(data);
   renderTable(data);
+}
+
+function renderShares(totalProfit) {
+  const selected = els.shareFilter.value;
+  const shares = selected === "all" ? SHARE_SPLIT : SHARE_SPLIT.filter(s => s.name === selected);
+  els.shareBase.textContent = `Dari net profit ${money(totalProfit)}`;
+  els.shareCards.innerHTML = shares.map(share => {
+    const amount = totalProfit * share.percent / 100;
+    return `
+      <article class="share-card">
+        <div>
+          <span>${share.name}</span>
+          <strong>${money(amount)}</strong>
+        </div>
+        <em>${share.percent}%</em>
+      </article>`;
+  }).join("");
 }
 
 function renderChart(data) {
@@ -182,7 +209,7 @@ async function loadData() {
   els.updated.textContent = `Update: ${new Date().toLocaleString("id-ID")}`;
 }
 
-[els.month, els.country, els.search].forEach(el => el.addEventListener("input", render));
+[els.month, els.country, els.search, els.shareFilter].forEach(el => el.addEventListener("input", render));
 els.refresh.addEventListener("click", () => loadData().catch(showError));
 
 function showError(error) {

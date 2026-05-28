@@ -36,7 +36,7 @@ h2 { font-size: 28px; letter-spacing: -0.035em; }
 .hero-card strong { display: block; margin: 8px 0; font-family: "Bricolage Grotesque"; font-size: 30px; }
 .hero-card small, .metric small { color: var(--muted); }
 
-.toolbar { display: grid; grid-template-columns: 180px 180px 1fr; gap: 14px; border-radius: 24px; padding: 16px; margin-bottom: 18px; }
+.toolbar { display: grid; grid-template-columns: 160px 160px 1fr 180px; gap: 14px; border-radius: 24px; padding: 16px; margin-bottom: 18px; }
 label { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 select, input { width: 100%; margin-top: 8px; border: 1px solid var(--line); border-radius: 15px; padding: 12px 14px; background: #fffdf4; color: var(--ink); font: inherit; outline: none; }
 
@@ -50,6 +50,13 @@ select, input { width: 100%; margin-top: 8px; border: 1px solid var(--line); bor
 .grid { display: grid; grid-template-columns: 1.4fr .8fr; gap: 16px; margin-bottom: 16px; }
 .panel { border-radius: 30px; padding: 22px; }
 .panel-head { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 18px; }
+.share-panel { margin-bottom: 16px; }
+.pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 9px 13px; background: rgba(31, 122, 77, .11); color: var(--green); font-size: 12px; font-weight: 900; }
+.share-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.share-card { display: flex; justify-content: space-between; gap: 14px; align-items: center; min-height: 112px; border-radius: 22px; padding: 18px; background: linear-gradient(135deg, rgba(255,255,255,.68), rgba(199,240,107,.18)); border: 1px solid var(--line); }
+.share-card span { display: block; color: var(--muted); font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.share-card strong { display: block; margin-top: 8px; font-family: "Bricolage Grotesque"; font-size: clamp(23px, 3vw, 34px); letter-spacing: -0.04em; }
+.share-card em { display: grid; place-items: center; flex: 0 0 58px; width: 58px; height: 58px; border-radius: 50%; background: var(--ink); color: #fff9e6; font-style: normal; font-weight: 900; }
 button { border: 0; border-radius: 999px; padding: 11px 16px; background: var(--ink); color: #fff9e6; font-weight: 800; cursor: pointer; }
 .bars { display: grid; gap: 12px; }
 .bar-row { display: grid; grid-template-columns: 76px 1fr 130px; gap: 12px; align-items: center; font-size: 14px; }
@@ -69,6 +76,7 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
 
 @media (max-width: 850px) {
   .hero, .toolbar, .metrics, .grid { grid-template-columns: 1fr; }
+  .share-cards { grid-template-columns: 1fr; }
   .hero-card { transform: none; }
   .shell { width: min(100% - 20px, 1180px); padding-top: 20px; }
 }

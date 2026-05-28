@@ -37,6 +37,16 @@
         Cari
         <input id="searchInput" type="search" placeholder="Item, buyer, tracking..." />
       </label>
+      <label>
+        Pembagian
+        <select id="shareFilter">
+          <option value="all">Semua bagian</option>
+          <option value="Husein">Husein</option>
+          <option value="Shafi">Shafi</option>
+          <option value="Yusuf">Yusuf</option>
+          <option value="Bebas">Bebas</option>
+        </select>
+      </label>
     </section>
 
     <section class="metrics" aria-label="Ringkasan performa">
@@ -44,6 +54,14 @@
       <article class="metric"><span>Net Profit</span><strong id="netProfit">IDR 0</strong><small>Profit bersih</small></article>
       <article class="metric"><span>Total Order</span><strong id="totalOrders">0</strong><small>Transaksi masuk</small></article>
       <article class="metric"><span>Margin</span><strong id="margin">0%</strong><small>Profit / selling</small></article>
+    </section>
+
+    <section class="panel share-panel">
+      <div class="panel-head">
+        <div><p class="eyebrow">Pembagian Profit</p><h2>Partner Share</h2></div>
+        <span id="shareBase" class="pill">Dari net profit</span>
+      </div>
+      <div id="shareCards" class="share-cards"></div>
     </section>
 
     <section class="grid">
