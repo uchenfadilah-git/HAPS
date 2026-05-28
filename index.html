@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>eBay Sales Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Live dari Google Sheet</p>
+        <h1>eBay Profit Dashboard</h1>
+        <p class="subtitle">Input tetap di Google Sheet, hasil penjualan dan profit langsung kebaca di sini.</p>
+      </div>
+      <div class="hero-card">
+        <span>Status data</span>
+        <strong id="dataStatus">Loading...</strong>
+        <small id="lastUpdated">-</small>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Filter dashboard">
+      <label>
+        Bulan
+        <select id="monthFilter"><option value="all">Semua bulan</option></select>
+      </label>
+      <label>
+        Negara
+        <select id="countryFilter"><option value="all">Semua negara</option></select>
+      </label>
+      <label>
+        Cari
+        <input id="searchInput" type="search" placeholder="Item, buyer, tracking..." />
+      </label>
+    </section>
+
+    <section class="metrics" aria-label="Ringkasan performa">
+      <article class="metric accent"><span>Total Selling</span><strong id="totalSelling">IDR 0</strong><small>Omset total</small></article>
+      <article class="metric"><span>Net Profit</span><strong id="netProfit">IDR 0</strong><small>Profit bersih</small></article>
+      <article class="metric"><span>Total Order</span><strong id="totalOrders">0</strong><small>Transaksi masuk</small></article>
+      <article class="metric"><span>Margin</span><strong id="margin">0%</strong><small>Profit / selling</small></article>
+    </section>
+
+    <section class="grid">
+      <article class="panel chart-panel">
+        <div class="panel-head">
+          <div><p class="eyebrow">Trend</p><h2>Profit per Bulan</h2></div>
+        </div>
+        <div id="monthlyChart" class="bars"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div><p class="eyebrow">Ranking</p><h2>Top Item Profit</h2></div>
+        </div>
+        <div id="topItems" class="rank-list"></div>
+      </article>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="panel-head">
+        <div><p class="eyebrow">Detail</p><h2>Daftar Penjualan</h2></div>
+        <button id="refreshBtn" type="button">Refresh Data</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Buyer</th><th>Item</th><th>Country</th><th>Selling</th><th>Buying</th><th>Delivery</th><th>Profit</th>
+            </tr>
+          </thead>
+          <tbody id="salesTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
