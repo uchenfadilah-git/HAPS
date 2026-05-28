@@ -8,7 +8,7 @@ const SHARE_SPLIT = [
   { name: "Husein", percent: 30 },
   { name: "Shafi", percent: 30 },
   { name: "Yusuf", percent: 30 },
-  { name: "Bebas", percent: 10 },
+  { name: "Operasional", percent: 10 },
 ];
 const COST_PARTNERS = ["Yusuf", "Shafi", "Husein"];
 const USD_TO_IDR = 16500;
