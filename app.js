@@ -238,14 +238,14 @@ function renderCost(data) {
   }).join("");
   els.costTable.innerHTML = data.map(r => `
     <tr>
-      <td>${r.code}</td>
-      <td>${r.tracking}</td>
-      <td>${moneyPair(r.buying)}</td>
-      <td>${moneyPair(r.delivery)}</td>
-      <td>${moneyPair(r.yusuf)}</td>
-      <td>${moneyPair(r.shafi)}</td>
-      <td>${moneyPair(r.husein)}</td>
-      <td>${moneyPair(r.total)}</td>
+      <td data-label="Transaction">${r.code}</td>
+      <td data-label="Tracking">${r.tracking}</td>
+      <td data-label="Buying">${moneyPair(r.buying)}</td>
+      <td data-label="Delivery">${moneyPair(r.delivery)}</td>
+      <td data-label="Yusuf">${moneyPair(r.yusuf)}</td>
+      <td data-label="Shafi">${moneyPair(r.shafi)}</td>
+      <td data-label="Husein">${moneyPair(r.husein)}</td>
+      <td data-label="Total Cost">${moneyPair(r.total)}</td>
     </tr>`).join("") || '<tr><td colspan="8">Data cost belum ada.</td></tr>';
 }
 
@@ -276,14 +276,14 @@ function renderTopItems(data) {
 function renderTable(data) {
   els.table.innerHTML = data.map(r => `
     <tr>
-      <td>${r.dateText}</td>
-      <td>${r.buyer}</td>
-      <td>${r.item}</td>
-      <td>${r.country}</td>
-      <td>${moneyPair(r.totalSelling, r.sellingUsd)}</td>
-      <td>${moneyPair(r.buying, r.buyingUsd)}</td>
-      <td>${moneyPair(r.delivery, r.deliveryUsd)}</td>
-      <td class="${r.profit >= 0 ? "profit-pos" : "profit-neg"}">${moneyPair(r.profit, r.profitUsd)}</td>
+      <td data-label="Date">${r.dateText}</td>
+      <td data-label="Buyer">${r.buyer}</td>
+      <td data-label="Item">${r.item}</td>
+      <td data-label="Country">${r.country}</td>
+      <td data-label="Selling">${moneyPair(r.totalSelling, r.sellingUsd)}</td>
+      <td data-label="Buying">${moneyPair(r.buying, r.buyingUsd)}</td>
+      <td data-label="Delivery">${moneyPair(r.delivery, r.deliveryUsd)}</td>
+      <td data-label="Profit" class="${r.profit >= 0 ? "profit-pos" : "profit-neg"}">${moneyPair(r.profit, r.profitUsd)}</td>
     </tr>`).join("");
 }
 

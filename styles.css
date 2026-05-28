@@ -116,6 +116,27 @@ th { color: #ffb36b; font-family: "Barlow Condensed"; font-size: 14px; text-tran
   .hero { min-height: 430px; padding: 24px; background-position: 35% center; }
 }
 
+@media (max-width: 760px) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  .shell { width: min(100% - 18px, 1220px); }
+  .hero { min-height: 360px; border-radius: 26px; }
+  h1 { font-size: clamp(48px, 18vw, 82px); }
+  h2 { font-size: 30px; }
+  .subtitle { font-size: 16px; }
+  .metric, .panel, .toolbar { border-radius: 22px; }
+  .metric { padding: 18px; }
+  .panel { padding: 18px; }
+  .share-card { min-height: 98px; }
+  .table-wrap { overflow: visible; border: 0; }
+  table, thead, tbody, tr, td { display: block; width: 100%; min-width: 0; }
+  thead { display: none; }
+  tr { margin-bottom: 12px; padding: 12px; border: 1px solid rgba(255,122,0,.18); border-radius: 18px; background: rgba(3,16,29,.62); }
+  td { display: grid; grid-template-columns: minmax(88px, 34%) 1fr; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+  td:last-child { border-bottom: 0; }
+  td::before { content: attr(data-label); color: #ffb36b; font-family: "Barlow Condensed"; font-size: 13px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+  .money-pair { justify-items: end; text-align: right; }
+}
+
 @media (max-width: 620px) {
   .top-nav { display: grid; }
   .brand-mark { width: 68px; height: 68px; }
