@@ -11,6 +11,11 @@
 </head>
 <body>
   <main class="shell">
+    <nav class="top-nav" aria-label="Menu utama">
+      <a href="#dashboard" class="nav-link active" data-page-link="dashboard">Dashboard</a>
+      <a href="#profit-share" class="nav-link" data-page-link="profit-share">Pembagian Profit</a>
+    </nav>
+
     <section class="hero">
       <div>
         <p class="eyebrow">Live dari Google Sheet</p>
@@ -37,64 +42,59 @@
         Cari
         <input id="searchInput" type="search" placeholder="Item, buyer, tracking..." />
       </label>
-      <label>
-        Pembagian
-        <select id="shareFilter">
-          <option value="all">Semua bagian</option>
-          <option value="Husein">Husein</option>
-          <option value="Shafi">Shafi</option>
-          <option value="Yusuf">Yusuf</option>
-          <option value="Bebas">Bebas</option>
-        </select>
-      </label>
+      <button id="refreshBtn" type="button">Refresh Data</button>
     </section>
 
-    <section class="metrics" aria-label="Ringkasan performa">
-      <article class="metric accent"><span>Total Selling</span><strong id="totalSelling">IDR 0</strong><small>Omset total</small></article>
-      <article class="metric"><span>Net Profit</span><strong id="netProfit">IDR 0</strong><small>Profit bersih</small></article>
-      <article class="metric"><span>Total Order</span><strong id="totalOrders">0</strong><small>Transaksi masuk</small></article>
-      <article class="metric"><span>Margin</span><strong id="margin">0%</strong><small>Profit / selling</small></article>
-    </section>
+    <section id="dashboardPage" class="page-view active">
+      <section class="metrics" aria-label="Ringkasan performa">
+        <article class="metric accent"><span>Total Selling</span><strong id="totalSelling">IDR 0</strong><small>Omset total</small></article>
+        <article class="metric"><span>Net Profit</span><strong id="netProfit">IDR 0</strong><small>Profit bersih</small></article>
+        <article class="metric"><span>Total Order</span><strong id="totalOrders">0</strong><small>Transaksi masuk</small></article>
+        <article class="metric"><span>Margin</span><strong id="margin">0%</strong><small>Profit / selling</small></article>
+      </section>
 
-    <section class="panel share-panel">
-      <div class="panel-head">
-        <div><p class="eyebrow">Pembagian Profit</p><h2>Partner Share</h2></div>
-        <span id="shareBase" class="pill">Dari net profit</span>
-      </div>
-      <div id="shareCards" class="share-cards"></div>
-    </section>
+      <section class="grid">
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">Trend</p><h2>Profit per Bulan</h2></div>
+          </div>
+          <div id="monthlyChart" class="bars"></div>
+        </article>
 
-    <section class="grid">
-      <article class="panel chart-panel">
+        <article class="panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">Ranking</p><h2>Top Item Profit</h2></div>
+          </div>
+          <div id="topItems" class="rank-list"></div>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
         <div class="panel-head">
-          <div><p class="eyebrow">Trend</p><h2>Profit per Bulan</h2></div>
+          <div><p class="eyebrow">Detail</p><h2>Daftar Penjualan</h2></div>
         </div>
-        <div id="monthlyChart" class="bars"></div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head">
-          <div><p class="eyebrow">Ranking</p><h2>Top Item Profit</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th><th>Buyer</th><th>Item</th><th>Country</th><th>Selling</th><th>Buying</th><th>Delivery</th><th>Profit</th>
+              </tr>
+            </thead>
+            <tbody id="salesTable"></tbody>
+          </table>
         </div>
-        <div id="topItems" class="rank-list"></div>
-      </article>
+      </section>
     </section>
 
-    <section class="panel table-panel">
-      <div class="panel-head">
-        <div><p class="eyebrow">Detail</p><h2>Daftar Penjualan</h2></div>
-        <button id="refreshBtn" type="button">Refresh Data</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th><th>Buyer</th><th>Item</th><th>Country</th><th>Selling</th><th>Buying</th><th>Delivery</th><th>Profit</th>
-            </tr>
-          </thead>
-          <tbody id="salesTable"></tbody>
-        </table>
-      </div>
+    <section id="profitSharePage" class="page-view">
+      <section class="panel share-panel share-landing">
+        <div class="panel-head">
+          <div><p class="eyebrow">Menu Terpisah</p><h2>Pembagian Profit</h2></div>
+          <span id="shareBase" class="pill">Dari net profit</span>
+        </div>
+        <p class="subtitle">Halaman khusus buat lihat pembagian profit partner dari data yang sedang terfilter.</p>
+        <div id="shareCards" class="share-cards"></div>
+      </section>
     </section>
   </main>
 

@@ -7,6 +7,7 @@ const SHARE_SPLIT = [
   { name: "Yusuf", percent: 30 },
   { name: "Bebas", percent: 10 },
 ];
+const USD_TO_IDR = 16500;
 
 const els = {
   status: document.querySelector("#dataStatus"),
@@ -14,7 +15,9 @@ const els = {
   month: document.querySelector("#monthFilter"),
   country: document.querySelector("#countryFilter"),
   search: document.querySelector("#searchInput"),
-  shareFilter: document.querySelector("#shareFilter"),
+  navLinks: document.querySelectorAll("[data-page-link]"),
+  dashboardPage: document.querySelector("#dashboardPage"),
+  profitSharePage: document.querySelector("#profitSharePage"),
   selling: document.querySelector("#totalSelling"),
   profit: document.querySelector("#netProfit"),
   orders: document.querySelector("#totalOrders"),
@@ -79,6 +82,14 @@ function money(value) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value || 0);
 }
 
+function dollar(value) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
+}
+
+function moneyPair(idrValue, usdValue = idrValue / USD_TO_IDR) {
+  return `<span class="money-pair"><strong>${money(idrValue)}</strong><small>${dollar(usdValue)}</small></span>`;
+}
+
 function monthKey(date) {
   if (!date) return "Unknown";
   return date.toLocaleDateString("id-ID", { month: "short", year: "numeric" });
@@ -102,9 +113,12 @@ function normalizeData(csv) {
       sellingUsd: toNumber(rec["Selling Price"]),
       totalSelling: toNumber(rec["Total Selling"]),
       buying: toNumber(rec["Total Buying"] || rec["Buying Price"]),
+      buyingUsd: toNumber(rec["Total Buying"] || rec["Buying Price"]) / USD_TO_IDR,
       delivery: toNumber(rec["Delivery Cost (Kurasi)"]),
+      deliveryUsd: toNumber(rec["Delivery Cost (Kurasi)"]) / USD_TO_IDR,
       tracking: rec["Tracking Code"],
       profit: toNumber(rec.Profit),
+      profitUsd: toNumber(rec.Profit) / USD_TO_IDR,
       month: monthKey(date),
     };
   });
@@ -143,16 +157,15 @@ function render() {
 }
 
 function renderShares(totalProfit) {
-  const selected = els.shareFilter.value;
-  const shares = selected === "all" ? SHARE_SPLIT : SHARE_SPLIT.filter(s => s.name === selected);
   els.shareBase.textContent = `Dari net profit ${money(totalProfit)}`;
-  els.shareCards.innerHTML = shares.map(share => {
+  els.shareCards.innerHTML = SHARE_SPLIT.map(share => {
     const amount = totalProfit * share.percent / 100;
     return `
       <article class="share-card">
         <div>
           <span>${share.name}</span>
           <strong>${money(amount)}</strong>
+          <small>${dollar(amount / USD_TO_IDR)}</small>
         </div>
         <em>${share.percent}%</em>
       </article>`;
@@ -190,10 +203,10 @@ function renderTable(data) {
       <td>${r.buyer}</td>
       <td>${r.item}</td>
       <td>${r.country}</td>
-      <td>${money(r.totalSelling)}</td>
-      <td>${money(r.buying)}</td>
-      <td>${money(r.delivery)}</td>
-      <td class="${r.profit >= 0 ? "profit-pos" : "profit-neg"}">${money(r.profit)}</td>
+      <td>${moneyPair(r.totalSelling, r.sellingUsd)}</td>
+      <td>${moneyPair(r.buying, r.buyingUsd)}</td>
+      <td>${moneyPair(r.delivery, r.deliveryUsd)}</td>
+      <td class="${r.profit >= 0 ? "profit-pos" : "profit-neg"}">${moneyPair(r.profit, r.profitUsd)}</td>
     </tr>`).join("");
 }
 
@@ -209,8 +222,23 @@ async function loadData() {
   els.updated.textContent = `Update: ${new Date().toLocaleString("id-ID")}`;
 }
 
-[els.month, els.country, els.search, els.shareFilter].forEach(el => el.addEventListener("input", render));
+function setPage(page) {
+  const isShare = page === "profit-share";
+  els.dashboardPage.classList.toggle("active", !isShare);
+  els.profitSharePage.classList.toggle("active", isShare);
+  els.navLinks.forEach(link => link.classList.toggle("active", link.dataset.pageLink === page));
+}
+
+els.navLinks.forEach(link => link.addEventListener("click", event => {
+  event.preventDefault();
+  const page = link.dataset.pageLink;
+  history.replaceState(null, "", page === "profit-share" ? "#profit-share" : "#dashboard");
+  setPage(page);
+}));
+
+[els.month, els.country, els.search].forEach(el => el.addEventListener("input", render));
 els.refresh.addEventListener("click", () => loadData().catch(showError));
+setPage(location.hash === "#profit-share" ? "profit-share" : "dashboard");
 
 function showError(error) {
   console.error(error);
