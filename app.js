@@ -240,11 +240,11 @@ function renderCost(data) {
     <tr>
       <td data-label="Transaction">${r.code}</td>
       <td data-label="Tracking">${r.tracking}</td>
-      <td data-label="Buying">${moneyPair(r.buying)}</td>
-      <td data-label="Delivery">${moneyPair(r.delivery)}</td>
-      <td data-label="Yusuf">${moneyPair(r.yusuf)}</td>
-      <td data-label="Shafi">${moneyPair(r.shafi)}</td>
-      <td data-label="Husein">${moneyPair(r.husein)}</td>
+      <td data-label="Buying Cost">${moneyPair(r.buying)}</td>
+      <td data-label="Delivery Cost">${moneyPair(r.delivery)}</td>
+      <td data-label="Yusuf Share">${moneyPair(r.yusuf)}</td>
+      <td data-label="Shafi Share">${moneyPair(r.shafi)}</td>
+      <td data-label="Husein Share">${moneyPair(r.husein)}</td>
       <td data-label="Total Cost">${moneyPair(r.total)}</td>
     </tr>`).join("") || '<tr><td colspan="8">Data cost belum ada.</td></tr>';
 }
