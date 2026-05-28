@@ -139,24 +139,19 @@ function normalizeData(csv) {
   });
 }
 
-function normalizeCostData(csv) {
-  const [header, ...data] = parseCSV(csv);
-  return data.filter(r => r.length > 5 && r[0] && r[0].trim() !== "-").map(r => {
-    const rec = Object.fromEntries(header.map((key, index) => [key.trim(), (r[index] || "").trim()]));
-    const buying = toNumber(rec["Total Buying"] || rec["Buying Price"]);
-    const delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
-    const yusuf = toNumber(rec.Yusuf) + toNumber(rec.Yusuf2);
-    const shafi = toNumber(rec.Shafi) + toNumber(rec.Shafi3);
-    const husein = toNumber(rec.Husein) + toNumber(rec.Husein4);
+function normalizeCostFromSales(salesRows) {
+  return salesRows.map(r => {
+    const total = r.buying + r.delivery;
+    const partnerShare = total / 3;
     return {
-      code: rec["Transaction Code"],
-      tracking: rec["Tracking Code"],
-      buying,
-      delivery,
-      yusuf,
-      shafi,
-      husein,
-      total: buying + delivery,
+      code: r.code,
+      tracking: r.tracking,
+      buying: r.buying,
+      delivery: r.delivery,
+      yusuf: partnerShare,
+      shafi: partnerShare,
+      husein: partnerShare,
+      total,
     };
   });
 }
@@ -228,7 +223,7 @@ function renderCost(data) {
   els.totalDeliveryCost.textContent = money(totals.delivery);
   els.totalCost.textContent = money(grandTotal);
   els.partnerCostAvg.textContent = money(grandTotal / 3);
-  els.costBase.textContent = `${data.length} transaksi dari sheet COST`;
+  els.costBase.textContent = `${data.length} transaksi dari semua data REKAP`;
   els.costCards.innerHTML = COST_PARTNERS.map(name => {
     const amount = totals[name.toLowerCase()];
     return `
@@ -300,12 +295,12 @@ async function fetchCsv(url) {
 
 async function loadData() {
   els.status.textContent = "Mengambil data";
-  const [rekapCsv, costCsv] = await Promise.all([fetchCsv(REKAP_CSV_URL), fetchCsv(COST_CSV_URL)]);
+  const rekapCsv = await fetchCsv(REKAP_CSV_URL);
   rows = normalizeData(rekapCsv);
-  costRows = normalizeCostData(costCsv);
+  costRows = normalizeCostFromSales(rows);
   fillFilters();
   render();
-  els.status.textContent = `${rows.length} sales / ${costRows.length} cost rows`;
+  els.status.textContent = `${rows.length} sales loaded`;
   els.updated.textContent = `Update: ${new Date().toLocaleString("id-ID")}`;
 }
 
