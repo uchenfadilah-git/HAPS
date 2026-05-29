@@ -8,6 +8,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    const savedTheme = localStorage.getItem("hb-theme") || "system";
+    const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+    document.documentElement.dataset.theme = savedTheme === "system" ? (prefersLight ? "light" : "dark") : savedTheme;
+  </script>
 </head>
 <body>
   <main class="shell">
@@ -21,6 +26,11 @@
         <a href="#problems" class="nav-link" data-page-link="problems">Problem/Loss</a>
         <a href="#items" class="nav-link" data-page-link="items">Item Insight</a>
         <a href="#reports" class="nav-link" data-page-link="reports">Report</a>
+      </div>
+      <div class="theme-switch" aria-label="Theme mode">
+        <button class="theme-btn" type="button" data-theme-choice="light">Light</button>
+        <button class="theme-btn" type="button" data-theme-choice="dark">Dark</button>
+        <button class="theme-btn" type="button" data-theme-choice="system">System</button>
       </div>
     </nav>
 

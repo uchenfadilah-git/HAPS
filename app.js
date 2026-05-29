@@ -20,6 +20,7 @@ const els = {
   country: document.querySelector("#countryFilter"),
   search: document.querySelector("#searchInput"),
   navLinks: document.querySelectorAll("[data-page-link]"),
+  themeButtons: document.querySelectorAll("[data-theme-choice]"),
   dashboardPage: document.querySelector("#dashboardPage"),
   profitSharePage: document.querySelector("#profitSharePage"),
   costSharePage: document.querySelector("#costSharePage"),
@@ -433,6 +434,19 @@ async function loadData() {
   els.updated.textContent = `Update: ${new Date().toLocaleString("id-ID")}`;
 }
 
+function applyTheme(choice) {
+  const theme = choice === "system"
+    ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+    : choice;
+  document.documentElement.dataset.theme = theme;
+  els.themeButtons.forEach(button => button.classList.toggle("active", button.dataset.themeChoice === choice));
+}
+
+function setTheme(choice) {
+  localStorage.setItem("hb-theme", choice);
+  applyTheme(choice);
+}
+
 function setPage(page) {
   els.dashboardPage.classList.toggle("active", page === "dashboard");
   els.profitSharePage.classList.toggle("active", page === "profit-share");
@@ -453,8 +467,13 @@ els.navLinks.forEach(link => link.addEventListener("click", event => {
 
 [els.month, els.country, els.search].forEach(el => el.addEventListener("input", render));
 els.refresh.addEventListener("click", () => loadData().catch(showError));
+els.themeButtons.forEach(button => button.addEventListener("click", () => setTheme(button.dataset.themeChoice)));
+window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+  if ((localStorage.getItem("hb-theme") || "system") === "system") applyTheme("system");
+});
 const validPages = ["#profit-share", "#cost-share", "#cashflow", "#problems", "#items", "#reports"];
 setPage(validPages.includes(location.hash) ? location.hash.slice(1) : "dashboard");
+applyTheme(localStorage.getItem("hb-theme") || "system");
 els.printReport.addEventListener("click", () => window.print());
 
 function showError(error) {
