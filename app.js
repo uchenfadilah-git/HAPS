@@ -125,9 +125,14 @@ function monthKey(date) {
   return date.toLocaleDateString("id-ID", { month: "short", year: "numeric" });
 }
 
+function isFilled(value) {
+  const text = String(value || "").trim();
+  return text && text !== "-";
+}
+
 function normalizeData(csv) {
   const [header, ...data] = parseCSV(csv);
-  return data.filter(r => r.length > 5 && r[0] && r[0].trim() !== "-").map(r => {
+  return data.map(r => {
     const rec = Object.fromEntries(header.map((key, index) => [key.trim(), (r[index] || "").trim()]));
     const date = toDate(rec.Date);
     const buying = toNumber(rec["Total Buying"] || rec["Buying Price"]);
@@ -154,6 +159,10 @@ function normalizeData(csv) {
       profitUsd: profit / USD_TO_IDR,
       month: monthKey(date),
     };
+  }).filter(r => {
+    const hasMainInfo = [r.dateText, r.code, r.buyer, r.item, r.country, r.tracking].some(isFilled);
+    const hasMoney = [r.sellingUsd, r.totalSelling, r.buying, r.delivery, r.profit].some(value => value !== 0);
+    return hasMainInfo || hasMoney;
   });
 }
 
@@ -406,14 +415,14 @@ function renderTopItems(data) {
 function renderTable(data) {
   els.table.innerHTML = data.map(r => `
     <tr>
-      <td data-label="Date">${r.dateText}</td>
-      <td data-label="Buyer">${r.buyer}</td>
-      <td data-label="Item">${r.item}</td>
-      <td data-label="Country">${r.country}</td>
-      <td data-label="Selling">${moneyPair(r.totalSelling, r.sellingUsd)}</td>
-      <td data-label="Buying">${moneyPair(r.buying, r.buyingUsd)}</td>
-      <td data-label="Delivery">${moneyPair(r.delivery, r.deliveryUsd)}</td>
-      <td data-label="Profit" class="${r.profit >= 0 ? "profit-pos" : "profit-neg"}">${moneyPair(r.profit, r.profitUsd)}</td>
+      <td data-label="Date">${isFilled(r.dateText) ? r.dateText : ""}</td>
+      <td data-label="Buyer">${isFilled(r.buyer) ? r.buyer : ""}</td>
+      <td data-label="Item">${isFilled(r.item) ? r.item : ""}</td>
+      <td data-label="Country">${isFilled(r.country) ? r.country : ""}</td>
+      <td data-label="Selling">${r.totalSelling || r.sellingUsd ? moneyPair(r.totalSelling, r.sellingUsd) : ""}</td>
+      <td data-label="Buying">${r.buying ? moneyPair(r.buying, r.buyingUsd) : ""}</td>
+      <td data-label="Delivery">${r.delivery ? moneyPair(r.delivery, r.deliveryUsd) : ""}</td>
+      <td data-label="Profit" class="${r.profit >= 0 ? "profit-pos" : "profit-neg"}">${r.profit ? moneyPair(r.profit, r.profitUsd) : ""}</td>
     </tr>`).join("");
 }
 
