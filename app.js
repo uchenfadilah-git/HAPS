@@ -282,19 +282,21 @@ function renderCost(data) {
 
 
 function renderCashflow(data) {
-  const cashIn = data.reduce((sum, r) => sum + r.totalSelling, 0);
-  const cashOut = data.reduce((sum, r) => sum + r.buying + r.delivery, 0);
-  const rates = data.map(r => r.rate).filter(Boolean);
+  const cashflowRows = data.filter(r => r.totalSelling || r.buying || r.delivery);
+  const cashIn = cashflowRows.reduce((sum, r) => sum + r.totalSelling, 0);
+  const cashOut = cashflowRows.reduce((sum, r) => sum + r.buying + r.delivery, 0);
+  const rates = cashflowRows.map(r => r.rate).filter(Boolean);
   const avgRate = rates.length ? rates.reduce((sum, rate) => sum + rate, 0) / rates.length : USD_TO_IDR;
   els.cashIn.textContent = money(cashIn);
   els.cashOut.textContent = money(cashOut);
   els.netCash.textContent = money(cashIn - cashOut);
   els.avgRate.textContent = Math.round(avgRate).toLocaleString("id-ID");
-  els.cashflowList.innerHTML = data.map(r => {
+  els.cashflowList.innerHTML = cashflowRows.map(r => {
     const out = r.buying + r.delivery;
     const net = r.totalSelling - out;
+    const label = [r.code, r.buyer].filter(isFilled).join(" - ");
     return `<div class="rank-item split-item">
-      <strong>${r.code} - ${r.buyer || "Buyer"}</strong>
+      <strong>${label}</strong>
       <span>In ${money(r.totalSelling)} / Out ${money(out)} / Net ${money(net)}</span>
     </div>`;
   }).join("") || '<p class="subtitle">Data belum ada.</p>';
