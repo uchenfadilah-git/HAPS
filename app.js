@@ -102,10 +102,15 @@ function toNumber(value) {
 }
 
 function toDate(value) {
-  const parts = String(value || "").split(/[/-]/).map(Number);
+  const text = String(value || "").trim();
+  const parts = text.split(/[/-]/).map(Number);
   if (parts.length < 3) return null;
-  const [month, day, year] = parts;
+  const [day, month, year] = parts;
   return new Date(year, month - 1, day);
+}
+
+function roundup(value) {
+  return Math.ceil(value || 0);
 }
 
 function money(value) {
@@ -166,19 +171,47 @@ function normalizeData(csv) {
   });
 }
 
+function normalizeCostData(csv) {
+  const [header, ...data] = parseCSV(csv);
+  return data.map(r => {
+    const rec = Object.fromEntries(header.map((key, index) => [key.trim(), (r[index] || "").trim()]));
+    const buying = toNumber(rec["Total Buying"]);
+    const delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
+    return {
+      code: rec["Transaction Code"],
+      tracking: rec["Tracking Code"],
+      buying,
+      delivery,
+      yusufBuying: toNumber(rec.Yusuf) || roundup(buying / 3),
+      shafiBuying: toNumber(rec.Shafi) || roundup(buying / 3),
+      huseinBuying: toNumber(rec.Husein) || roundup(buying / 3),
+      yusufDelivery: toNumber(rec.Yusuf2) || roundup(delivery / 3),
+      shafiDelivery: toNumber(rec.Shafi2) || roundup(delivery / 3),
+      huseinDelivery: toNumber(rec.Husein2) || roundup(delivery / 3),
+      total: buying + delivery,
+    };
+  }).map(r => ({
+    ...r,
+    yusuf: r.yusufBuying + r.yusufDelivery,
+    shafi: r.shafiBuying + r.shafiDelivery,
+    husein: r.huseinBuying + r.huseinDelivery,
+  })).filter(r => r.code && r.code !== "-" && r.total > 0);
+}
+
 function normalizeCostFromSales(salesRows) {
   return salesRows.map(r => {
-    const total = r.buying + r.delivery;
-    const partnerShare = total / 3;
+    const yusuf = roundup(r.buying / 3) + roundup(r.delivery / 3);
+    const shafi = roundup(r.buying / 3) + roundup(r.delivery / 3);
+    const husein = roundup(r.buying / 3) + roundup(r.delivery / 3);
     return {
       code: r.code,
       tracking: r.tracking,
       buying: r.buying,
       delivery: r.delivery,
-      yusuf: partnerShare,
-      shafi: partnerShare,
-      husein: partnerShare,
-      total,
+      yusuf,
+      shafi,
+      husein,
+      total: r.buying + r.delivery,
     };
   }).filter(r => r.code && r.code !== "-" && r.total > 0);
 }
@@ -217,7 +250,7 @@ function render() {
   renderChart(data);
   renderTopItems(data);
   renderTable(data);
-  renderCost(costRows);
+  renderCost(filteredCostRows());
   renderCashflow(data);
   renderProblems(data);
   renderItemInsights(data);
@@ -254,7 +287,7 @@ function renderCost(data) {
   els.totalDeliveryCost.textContent = money(totals.delivery);
   els.totalCost.textContent = money(grandTotal);
   els.partnerCostAvg.textContent = money(grandTotal / 3);
-  els.costBase.textContent = `${data.length} transaksi dari semua data REKAP`;
+  els.costBase.textContent = `${data.length} transaksi sesuai filter aktif`;
   els.costCards.innerHTML = COST_PARTNERS.map(name => {
     const amount = totals[name.toLowerCase()];
     return `
@@ -436,9 +469,12 @@ async function fetchCsv(url) {
 
 async function loadData() {
   els.status.textContent = "Mengambil data";
-  const rekapCsv = await fetchCsv(REKAP_CSV_URL);
+  const [rekapCsv, costCsv] = await Promise.all([
+    fetchCsv(REKAP_CSV_URL),
+    fetchCsv(COST_CSV_URL).catch(() => ""),
+  ]);
   rows = normalizeData(rekapCsv);
-  costRows = normalizeCostFromSales(rows);
+  costRows = costCsv ? normalizeCostData(costCsv) : normalizeCostFromSales(rows);
   fillFilters();
   render();
   els.status.textContent = `${rows.length} sales loaded`;
