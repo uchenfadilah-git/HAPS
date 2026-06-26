@@ -1,9 +1,15 @@
 const SHEET_BASE_URL = "https://docs.google.com/spreadsheets/d/1QY6xEU_ppaR8zZNg44hHJ8OH4w7n-GWO/gviz/tq?tqx=out:csv";
 const REKAP_CSV_URL = `${SHEET_BASE_URL}&sheet=REKAP`;
 const COST_CSV_URL = `${SHEET_BASE_URL}&sheet=COST`;
+const PROFIT_CSV_URL = `${SHEET_BASE_URL}&sheet=PROFIT`;
+const REQUIRED_REKAP_FIELDS = ["Date", "Transaction Code", "Buyer", "Item", "Buyer Country", "Tracking Code"];
+const REQUIRED_COST_FIELDS = ["Transaction Code", "Tracking Code"];
+const REQUIRED_PROFIT_FIELDS = ["Transaction Code", "Buyer", "Item"];
 
 let rows = [];
 let costRows = [];
+let profitRows = [];
+let sheetHealth = [];
 const SHARE_SPLIT = [
   { name: "Husein", percent: 30 },
   { name: "Shafi", percent: 30 },
@@ -135,14 +141,27 @@ function isFilled(value) {
   return text && text !== "-";
 }
 
+function hasSheetIdentity(rec, fields) {
+  return fields.some(field => isFilled(rec[field]));
+}
+
+function rowsFromCsv(csv, requiredFields = []) {
+  const [header = [], ...data] = parseCSV(csv || "");
+  const normalizedHeader = header.map(key => key.trim());
+  return data
+    .map(r => Object.fromEntries(normalizedHeader.map((key, index) => [key, (r[index] || "").trim()])))
+    .filter(rec => hasSheetIdentity(rec, requiredFields));
+}
+
 function normalizeData(csv) {
-  const [header, ...data] = parseCSV(csv);
-  return data.map(r => {
-    const rec = Object.fromEntries(header.map((key, index) => [key.trim(), (r[index] || "").trim()]));
+  return rowsFromCsv(csv, REQUIRED_REKAP_FIELDS).map(rec => {
     const date = toDate(rec.Date);
     const buying = toNumber(rec["Total Buying"] || rec["Buying Price"]);
     const delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
     const profit = toNumber(rec.Profit);
+    const rate = toNumber(rec["Rate Selling"]);
+    const totalSelling = toNumber(rec["Total Selling"]);
+    const feeUsd = toNumber(rec["Sales - Fee eBay"]);
     return {
       no: rec.No,
       date,
@@ -152,9 +171,10 @@ function normalizeData(csv) {
       item: rec.Item,
       qty: toNumber(rec.Qty),
       country: rec["Buyer Country"],
-      rate: toNumber(rec["Rate Selling"]),
-      sellingUsd: toNumber(rec["Selling Price"]),
-      totalSelling: toNumber(rec["Total Selling"]),
+      rate,
+      sellingUsd: rate ? totalSelling / rate : feeUsd,
+      feeUsd,
+      totalSelling,
       buying,
       buyingUsd: buying / USD_TO_IDR,
       delivery,
@@ -162,19 +182,16 @@ function normalizeData(csv) {
       tracking: rec["Tracking Code"],
       profit,
       profitUsd: profit / USD_TO_IDR,
+      otherCostUsd: toNumber(rec["Other Cost (USD)"]),
+      otherCostIdr: toNumber(rec["Other Cost (IDR)"]),
+      withdrawal: toNumber(rec["Total Withdrawal"]),
       month: monthKey(date),
     };
-  }).filter(r => {
-    const hasMainInfo = [r.dateText, r.code, r.buyer, r.item, r.country, r.tracking].some(isFilled);
-    const hasMoney = [r.sellingUsd, r.totalSelling, r.buying, r.delivery, r.profit].some(value => value !== 0);
-    return hasMainInfo || hasMoney;
   });
 }
 
 function normalizeCostData(csv) {
-  const [header, ...data] = parseCSV(csv);
-  return data.map(r => {
-    const rec = Object.fromEntries(header.map((key, index) => [key.trim(), (r[index] || "").trim()]));
+  return rowsFromCsv(csv, REQUIRED_COST_FIELDS).map(rec => {
     const buying = toNumber(rec["Total Buying"]);
     const delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
     return {
@@ -196,6 +213,56 @@ function normalizeCostData(csv) {
     shafi: r.shafiBuying + r.shafiDelivery,
     husein: r.huseinBuying + r.huseinDelivery,
   })).filter(r => r.code && r.code !== "-" && r.total > 0);
+}
+
+function normalizeProfitData(csv) {
+  return rowsFromCsv(csv, REQUIRED_PROFIT_FIELDS).map(rec => ({
+    code: rec["Transaction Code"],
+    buyer: rec.Buyer,
+    item: rec.Item,
+    profit: toNumber(rec.Profit),
+    yusuf: toNumber(rec["Yusuf (30%)"]),
+    shafi: toNumber(rec["Shafi (30%)"]),
+    husein: toNumber(rec["Husein (30%)"]),
+    retained: toNumber(rec["Laba ditahan (10%)"]),
+  })).filter(r => r.code && r.code !== "-");
+}
+
+function buildSheetHealth() {
+  const salesCodes = new Set(rows.map(r => r.code).filter(isFilled));
+  const costCodes = new Set(costRows.map(r => r.code).filter(isFilled));
+  const profitCodes = new Set(profitRows.map(r => r.code).filter(isFilled));
+  const missingCost = [...salesCodes].filter(code => !costCodes.has(code));
+  const missingProfit = [...salesCodes].filter(code => !profitCodes.has(code));
+  const staleCost = [...costCodes].filter(code => !salesCodes.has(code));
+  const staleProfit = [...profitCodes].filter(code => !salesCodes.has(code));
+  const formulaMismatches = [];
+
+  profitRows.forEach(profitRow => {
+    const sale = rows.find(r => r.code === profitRow.code);
+    if (!sale) return;
+    const expected = {
+      yusuf: sale.profit * 0.3,
+      shafi: sale.profit * 0.3,
+      husein: sale.profit * 0.3,
+      retained: sale.profit * 0.1,
+    };
+    ["yusuf", "shafi", "husein", "retained"].forEach(key => {
+      if (Math.abs((profitRow[key] || 0) - expected[key]) > 1) {
+        formulaMismatches.push(`${profitRow.code} ${key}`);
+      }
+    });
+  });
+
+  sheetHealth = [
+    { label: "REKAP", status: `${rows.length} transaksi valid`, ok: rows.length > 0 },
+    { label: "COST", status: `${costRows.length} baris cost valid`, ok: missingCost.length === 0, detail: missingCost.length ? `Belum ada cost: ${missingCost.slice(0, 3).join(", ")}` : "Semua transaksi punya cost" },
+    { label: "PROFIT", status: `${profitRows.length} baris profit valid`, ok: missingProfit.length === 0 && formulaMismatches.length === 0, detail: missingProfit.length ? `Belum ada profit share: ${missingProfit.slice(0, 3).join(", ")}` : (formulaMismatches.length ? `Cek rumus: ${formulaMismatches.slice(0, 3).join(", ")}` : "Rumus 30/30/30/10 sesuai") },
+  ];
+
+  if (staleCost.length || staleProfit.length) {
+    sheetHealth.push({ label: "Cleanup", status: "Ada kode lama di sheet turunan", ok: false, detail: [...staleCost, ...staleProfit].slice(0, 4).join(", ") });
+  }
 }
 
 function normalizeCostFromSales(salesRows) {
@@ -247,6 +314,7 @@ function render() {
   els.orders.textContent = data.length.toLocaleString("id-ID");
   els.margin.textContent = totalSelling ? `${((totalProfit / totalSelling) * 100).toFixed(1)}%` : "0%";
   renderShares(totalProfit);
+  renderSheetHealth();
   renderChart(data);
   renderTopItems(data);
   renderTable(data);
@@ -271,6 +339,16 @@ function renderShares(totalProfit) {
         <em>${share.percent}%</em>
       </article>`;
   }).join("");
+}
+
+function renderSheetHealth() {
+  const container = document.querySelector("#sheetHealth");
+  if (!container) return;
+  container.innerHTML = sheetHealth.map(item => `
+    <div class="rank-item split-item ${item.ok ? "" : "danger-item"}">
+      <strong>${item.label} - ${item.status}</strong>
+      <span>${item.detail || "Data terbaca normal"}</span>
+    </div>`).join("");
 }
 
 function renderCost(data) {
@@ -469,12 +547,15 @@ async function fetchCsv(url) {
 
 async function loadData() {
   els.status.textContent = "Mengambil data";
-  const [rekapCsv, costCsv] = await Promise.all([
+  const [rekapCsv, costCsv, profitCsv] = await Promise.all([
     fetchCsv(REKAP_CSV_URL),
     fetchCsv(COST_CSV_URL).catch(() => ""),
+    fetchCsv(PROFIT_CSV_URL).catch(() => ""),
   ]);
   rows = normalizeData(rekapCsv);
   costRows = costCsv ? normalizeCostData(costCsv) : normalizeCostFromSales(rows);
+  profitRows = profitCsv ? normalizeProfitData(profitCsv) : [];
+  buildSheetHealth();
   fillFilters();
   render();
   els.status.textContent = `${rows.length} sales loaded`;
