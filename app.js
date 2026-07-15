@@ -8,6 +8,8 @@ const REQUIRED_PROFIT_FIELDS = ["Transaction Code", "Buyer", "Item"];
 
 let rows = [];
 let costRows = [];
+let costSheetRows = [];
+let costFallbackRows = [];
 let profitRows = [];
 let sheetHealth = [];
 const SHARE_SPLIT = [
@@ -206,6 +208,7 @@ function normalizeCostData(csv) {
       shafiDelivery: toNumber(rec.Shafi2) || roundup(delivery / 3),
       huseinDelivery: toNumber(rec.Husein2) || roundup(delivery / 3),
       total: buying + delivery,
+      source: "sheet",
     };
   }).map(r => ({
     ...r,
@@ -230,11 +233,14 @@ function normalizeProfitData(csv) {
 
 function buildSheetHealth() {
   const salesCodes = new Set(rows.map(r => r.code).filter(isFilled));
-  const costCodes = new Set(costRows.map(r => r.code).filter(isFilled));
+  const costSheetCodes = new Set(costSheetRows.map(r => r.code).filter(isFilled));
   const profitCodes = new Set(profitRows.map(r => r.code).filter(isFilled));
-  const missingCost = [...salesCodes].filter(code => !costCodes.has(code));
+  const missingCost = [...salesCodes].filter(code => !costSheetCodes.has(code));
+  const fallbackCost = costFallbackRows.map(r => r.code).filter(isFilled);
+  const fallbackCostCodes = new Set(fallbackCost);
+  const uncoveredCost = missingCost.filter(code => !fallbackCostCodes.has(code));
   const missingProfit = [...salesCodes].filter(code => !profitCodes.has(code));
-  const staleCost = [...costCodes].filter(code => !salesCodes.has(code));
+  const staleCost = [...costSheetCodes].filter(code => !salesCodes.has(code));
   const staleProfit = [...profitCodes].filter(code => !salesCodes.has(code));
   const formulaMismatches = [];
 
@@ -256,7 +262,7 @@ function buildSheetHealth() {
 
   sheetHealth = [
     { label: "REKAP", status: `${rows.length} transaksi valid`, ok: rows.length > 0 },
-    { label: "COST", status: `${costRows.length} baris cost valid`, ok: missingCost.length === 0, detail: missingCost.length ? `Belum ada cost: ${missingCost.slice(0, 3).join(", ")}` : "Semua transaksi punya cost" },
+    { label: "COST", status: `${costSheetRows.length} sheet / ${costRows.length} total cost`, ok: uncoveredCost.length === 0, detail: missingCost.length ? `Fallback dari REKAP: ${fallbackCost.length} baris. Tanpa cost: ${uncoveredCost.length ? uncoveredCost.slice(0, 3).join(", ") : "0"}` : "Semua transaksi punya cost dari sheet" },
     { label: "PROFIT", status: `${profitRows.length} baris profit valid`, ok: missingProfit.length === 0 && formulaMismatches.length === 0, detail: missingProfit.length ? `Belum ada profit share: ${missingProfit.slice(0, 3).join(", ")}` : (formulaMismatches.length ? `Cek rumus: ${formulaMismatches.slice(0, 3).join(", ")}` : "Rumus 30/30/30/10 sesuai") },
   ];
 
@@ -279,6 +285,7 @@ function normalizeCostFromSales(salesRows) {
       shafi,
       husein,
       total: r.buying + r.delivery,
+      source: "rekap-fallback",
     };
   }).filter(r => r.code && r.code !== "-" && r.total > 0);
 }
@@ -553,7 +560,10 @@ async function loadData() {
     fetchCsv(PROFIT_CSV_URL).catch(() => ""),
   ]);
   rows = normalizeData(rekapCsv);
-  costRows = costCsv ? normalizeCostData(costCsv) : normalizeCostFromSales(rows);
+  costSheetRows = costCsv ? normalizeCostData(costCsv) : [];
+  const costSheetCodes = new Set(costSheetRows.map(r => r.code));
+  costFallbackRows = normalizeCostFromSales(rows).filter(r => !costSheetCodes.has(r.code));
+  costRows = [...costSheetRows, ...costFallbackRows];
   profitRows = profitCsv ? normalizeProfitData(profitCsv) : [];
   buildSheetHealth();
   fillFilters();
