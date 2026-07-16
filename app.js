@@ -483,10 +483,10 @@ function renderReport(data) {
 
   els.reportSummary.innerHTML = `
     <div class="report-cover">
-      <img src="assets/logo.png" alt="HB Autopartshop" />
+      <img src="assets/logo.png" alt="HB Auto Parts" />
       <div>
         <p class="eyebrow">Monthly Business Report</p>
-        <h2>HB Autopartshop</h2>
+        <h2>HB Auto Parts</h2>
         <span>${monthLabel} / ${countryLabel} / ${new Date().toLocaleDateString("id-ID")}</span>
       </div>
     </div>
