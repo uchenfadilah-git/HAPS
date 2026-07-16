@@ -1,623 +1,159 @@
 const SHEET_BASE_URL = "https://docs.google.com/spreadsheets/d/1QY6xEU_ppaR8zZNg44hHJ8OH4w7n-GWO/gviz/tq?tqx=out:csv";
-const REKAP_CSV_URL = `${SHEET_BASE_URL}&sheet=REKAP`;
-const COST_CSV_URL = `${SHEET_BASE_URL}&sheet=COST`;
-const PROFIT_CSV_URL = `${SHEET_BASE_URL}&sheet=PROFIT`;
-const REQUIRED_REKAP_FIELDS = ["Date", "Transaction Code", "Buyer", "Item", "Buyer Country", "Tracking Code"];
-const REQUIRED_COST_FIELDS = ["Transaction Code", "Tracking Code"];
-const REQUIRED_PROFIT_FIELDS = ["Transaction Code", "Buyer", "Item"];
+const TABS = {
+  rekap: `${SHEET_BASE_URL}&sheet=REKAP`,
+  cost: `${SHEET_BASE_URL}&sheet=COST`,
+  profit: `${SHEET_BASE_URL}&sheet=PROFIT`,
+  capital: `${SHEET_BASE_URL}&sheet=Permodalan`,
+  settlement: `${SHEET_BASE_URL}&sheet=Pencatatan%20eBay`,
+  cash: `${SHEET_BASE_URL}&sheet=Saldo%20Cash`,
+};
+const USD_TO_IDR = 16500;
+const PARTNERS = ["Yusuf", "Shafi", "Husein"];
+const PROFIT_SPLIT = [
+  { name: "Yusuf", percent: 30 },
+  { name: "Shafi", percent: 30 },
+  { name: "Husein", percent: 30 },
+  { name: "Laba Ditahan", percent: 10 },
+];
 
-let rows = [];
+let salesRows = [];
 let costRows = [];
 let costSheetRows = [];
 let costFallbackRows = [];
 let profitRows = [];
-let sheetHealth = [];
-const SHARE_SPLIT = [
-  { name: "Husein", percent: 30 },
-  { name: "Shafi", percent: 30 },
-  { name: "Yusuf", percent: 30 },
-  { name: "Operasional", percent: 10 },
-];
-const COST_PARTNERS = ["Yusuf", "Shafi", "Husein"];
-const USD_TO_IDR = 16500;
+let settlementRows = [];
+let cashRows = [];
+let capitalRows = [];
+let auditItems = [];
 
 const els = {
-  status: document.querySelector("#dataStatus"),
-  updated: document.querySelector("#lastUpdated"),
-  month: document.querySelector("#monthFilter"),
-  country: document.querySelector("#countryFilter"),
-  search: document.querySelector("#searchInput"),
-  navLinks: document.querySelectorAll("[data-page-link]"),
-  themeButtons: document.querySelectorAll("[data-theme-choice]"),
-  dashboardPage: document.querySelector("#dashboardPage"),
-  profitSharePage: document.querySelector("#profitSharePage"),
-  costSharePage: document.querySelector("#costSharePage"),
-  cashflowPage: document.querySelector("#cashflowPage"),
-  problemsPage: document.querySelector("#problemsPage"),
-  itemsPage: document.querySelector("#itemsPage"),
-  reportsPage: document.querySelector("#reportsPage"),
-  selling: document.querySelector("#totalSelling"),
-  profit: document.querySelector("#netProfit"),
-  orders: document.querySelector("#totalOrders"),
-  margin: document.querySelector("#margin"),
-  shareBase: document.querySelector("#shareBase"),
-  shareCards: document.querySelector("#shareCards"),
-  chart: document.querySelector("#monthlyChart"),
-  topItems: document.querySelector("#topItems"),
-  table: document.querySelector("#salesTable"),
-  totalBuyingCost: document.querySelector("#totalBuyingCost"),
-  totalDeliveryCost: document.querySelector("#totalDeliveryCost"),
-  totalCost: document.querySelector("#totalCost"),
-  partnerCostAvg: document.querySelector("#partnerCostAvg"),
-  costBase: document.querySelector("#costBase"),
-  costCards: document.querySelector("#costCards"),
-  costTable: document.querySelector("#costTable"),
-  cashIn: document.querySelector("#cashIn"),
-  cashOut: document.querySelector("#cashOut"),
-  netCash: document.querySelector("#netCash"),
-  avgRate: document.querySelector("#avgRate"),
-  cashflowList: document.querySelector("#cashflowList"),
-  lossOrders: document.querySelector("#lossOrders"),
-  totalLoss: document.querySelector("#totalLoss"),
-  highDelivery: document.querySelector("#highDelivery"),
-  lowMargin: document.querySelector("#lowMargin"),
-  problemList: document.querySelector("#problemList"),
-  itemInsights: document.querySelector("#itemInsights"),
-  reportSummary: document.querySelector("#reportSummary"),
-  printReport: document.querySelector("#printReportBtn"),
-  refresh: document.querySelector("#refreshBtn"),
+  status: document.querySelector("#dataStatus"), updated: document.querySelector("#lastUpdated"),
+  month: document.querySelector("#monthFilter"), country: document.querySelector("#countryFilter"), search: document.querySelector("#searchInput"), refresh: document.querySelector("#refreshBtn"),
+  navLinks: document.querySelectorAll("[data-page-link]"), themeButtons: document.querySelectorAll("[data-theme-choice]"), printReport: document.querySelector("#printReportBtn"),
+  pages: {
+    dashboard: document.querySelector("#dashboardPage"), sales: document.querySelector("#salesPage"), settlement: document.querySelector("#settlementPage"), cash: document.querySelector("#cashPage"), partners: document.querySelector("#partnersPage"), share: document.querySelector("#sharePage"), audit: document.querySelector("#auditPage"), reports: document.querySelector("#reportsPage"),
+  },
+  totalSales: document.querySelector("#totalSales"), netProfit: document.querySelector("#netProfit"), cashInTotal: document.querySelector("#cashInTotal"), cashOutTotal: document.querySelector("#cashOutTotal"), cashBalance: document.querySelector("#cashBalance"), auditIssueCount: document.querySelector("#auditIssueCount"),
+  businessHealth: document.querySelector("#businessHealth"), monthlyChart: document.querySelector("#monthlyChart"), topItems: document.querySelector("#topItems"), salesCount: document.querySelector("#salesCount"), salesTable: document.querySelector("#salesTable"),
+  ebayCash: document.querySelector("#ebayCash"), payoneerActual: document.querySelector("#payoneerActual"), otherCostActual: document.querySelector("#otherCostActual"), rateDiff: document.querySelector("#rateDiff"), settlementCount: document.querySelector("#settlementCount"), settlementTable: document.querySelector("#settlementTable"),
+  cashInPage: document.querySelector("#cashInPage"), cashOutPage: document.querySelector("#cashOutPage"), cashBalancePage: document.querySelector("#cashBalancePage"), cashRowsCount: document.querySelector("#cashRowsCount"), cashTimeline: document.querySelector("#cashTimeline"),
+  partnerCards: document.querySelector("#partnerCards"), partnerTable: document.querySelector("#partnerTable"), shareBase: document.querySelector("#shareBase"), shareCards: document.querySelector("#shareCards"), costBase: document.querySelector("#costBase"), costCards: document.querySelector("#costCards"), costTable: document.querySelector("#costTable"),
+  auditCount: document.querySelector("#auditCount"), auditList: document.querySelector("#auditList"), reportSummary: document.querySelector("#reportSummary"),
 };
 
 function parseCSV(text) {
-  const result = [];
-  let row = [];
-  let cell = "";
-  let quoted = false;
-
+  const result = []; let row = []; let cell = ""; let quoted = false;
   for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const next = text[i + 1];
-
-    if (char === '"' && quoted && next === '"') {
-      cell += '"';
-      i++;
-    } else if (char === '"') {
-      quoted = !quoted;
-    } else if (char === "," && !quoted) {
-      row.push(cell);
-      cell = "";
-    } else if ((char === "\n" || char === "\r") && !quoted) {
-      if (cell || row.length) result.push([...row, cell]);
-      row = [];
-      cell = "";
-      if (char === "\r" && next === "\n") i++;
-    } else {
-      cell += char;
-    }
+    const char = text[i], next = text[i + 1];
+    if (char === '"' && quoted && next === '"') { cell += '"'; i++; }
+    else if (char === '"') quoted = !quoted;
+    else if (char === "," && !quoted) { row.push(cell); cell = ""; }
+    else if ((char === "\n" || char === "\r") && !quoted) { if (cell || row.length) result.push([...row, cell]); row = []; cell = ""; if (char === "\r" && next === "\n") i++; }
+    else cell += char;
   }
   if (cell || row.length) result.push([...row, cell]);
   return result;
 }
-
+function isFilled(value) { const text = String(value || "").trim(); return Boolean(text && text !== "-"); }
 function toNumber(value) {
-  if (!value || String(value).trim() === "-") return 0;
-  const cleaned = String(value)
-    .replace(/IDR|USD|Rp|\s/g, "")
-    .replace(/\./g, "")
-    .replace(/,/g, ".")
-    .replace(/[^0-9.-]/g, "");
+  const raw = String(value || "").trim(); if (!raw || raw === "-") return 0;
+  const cleaned = raw.replace(/IDR|USD|Rp|\s/g, "").replace(/\./g, "").replace(/,/g, ".").replace(/[^0-9.-]/g, "");
   return Number(cleaned) || 0;
 }
-
-function toDate(value) {
-  const text = String(value || "").trim();
-  const parts = text.split(/[/-]/).map(Number);
-  if (parts.length < 3) return null;
-  const [day, month, year] = parts;
-  return new Date(year, month - 1, day);
-}
-
-function roundup(value) {
-  return Math.ceil(value || 0);
-}
-
-function money(value) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value || 0);
-}
-
-function dollar(value) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
-}
-
-function moneyPair(idrValue, usdValue = idrValue / USD_TO_IDR) {
-  return `<span class="money-pair"><strong>${money(idrValue)}</strong><small>${dollar(usdValue)}</small></span>`;
-}
-
-function monthKey(date) {
-  if (!date) return "Unknown";
-  return date.toLocaleDateString("id-ID", { month: "short", year: "numeric" });
-}
-
-function isFilled(value) {
-  const text = String(value || "").trim();
-  return text && text !== "-";
-}
-
-function hasSheetIdentity(rec, fields) {
-  return fields.some(field => isFilled(rec[field]));
-}
-
+function toDate(value) { const p = String(value || "").trim().split(/[/-]/).map(Number); return p.length >= 3 ? new Date(p[2], p[1] - 1, p[0]) : null; }
+function monthKey(date) { return date ? date.toLocaleDateString("id-ID", { month: "short", year: "numeric" }) : "Unknown"; }
+function money(value) { return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value || 0); }
+function dollar(value) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0); }
+function moneyPair(idrValue, usdValue = idrValue / USD_TO_IDR) { return `<span class="money-pair"><strong>${money(idrValue)}</strong><small>${dollar(usdValue)}</small></span>`; }
+function roundup(value) { return Math.ceil(value || 0); }
 function rowsFromCsv(csv, requiredFields = []) {
-  const [header = [], ...data] = parseCSV(csv || "");
-  const normalizedHeader = header.map(key => key.trim());
-  return data
-    .map(r => Object.fromEntries(normalizedHeader.map((key, index) => [key, (r[index] || "").trim()])))
-    .filter(rec => hasSheetIdentity(rec, requiredFields));
+  const [header = [], ...data] = parseCSV(csv || ""); const normalizedHeader = header.map(k => k.trim());
+  return data.map(r => Object.fromEntries(normalizedHeader.map((key, index) => [key, (r[index] || "").trim()])))
+    .filter(rec => requiredFields.some(field => isFilled(rec[field])));
 }
+async function fetchCsv(url) { const res = await fetch(`${url}&cacheBust=${Date.now()}`); if (!res.ok) throw new Error(`Google Sheet tidak bisa dibaca (${res.status})`); return res.text(); }
 
-function normalizeData(csv) {
-  return rowsFromCsv(csv, REQUIRED_REKAP_FIELDS).map(rec => {
-    const date = toDate(rec.Date);
-    const buying = toNumber(rec["Total Buying"] || rec["Buying Price"]);
-    const delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
-    const profit = toNumber(rec.Profit);
-    const rate = toNumber(rec["Rate Selling"]);
-    const totalSelling = toNumber(rec["Total Selling"]);
-    const feeUsd = toNumber(rec["Sales - Fee eBay"]);
-    return {
-      no: rec.No,
-      date,
-      dateText: rec.Date,
-      code: rec["Transaction Code"],
-      buyer: rec.Buyer,
-      item: rec.Item,
-      qty: toNumber(rec.Qty),
-      country: rec["Buyer Country"],
-      rate,
-      sellingUsd: rate ? totalSelling / rate : feeUsd,
-      feeUsd,
-      totalSelling,
-      buying,
-      buyingUsd: buying / USD_TO_IDR,
-      delivery,
-      deliveryUsd: delivery / USD_TO_IDR,
-      tracking: rec["Tracking Code"],
-      profit,
-      profitUsd: profit / USD_TO_IDR,
-      otherCostUsd: toNumber(rec["Other Cost (USD)"]),
-      otherCostIdr: toNumber(rec["Other Cost (IDR)"]),
-      withdrawal: toNumber(rec["Total Withdrawal"]),
-      month: monthKey(date),
-    };
+function normalizeSales(csv) {
+  return rowsFromCsv(csv, ["Date", "Transaction Code", "Buyer", "Item", "Buyer Country", "Tracking Code"]).map(rec => {
+    const date = toDate(rec.Date); const buying = toNumber(rec["Total Buying"] || rec["Buying Price"]); const delivery = toNumber(rec["Delivery Cost (Kurasi)"]); const profit = toNumber(rec.Profit); const totalSelling = toNumber(rec["Total Selling"]); const rate = toNumber(rec["Rate Selling"]); const code = rec["Transaction Code"];
+    const status = !isFilled(code) ? "Draft" : /cancel/i.test(`${rec["Tracking Code"]} ${rec.Item}`) ? "Cancelled" : (!delivery && buying ? "Pending Delivery" : "Completed");
+    return { no: rec.No, date, dateText: rec.Date, month: monthKey(date), code, buyer: rec.Buyer, item: rec.Item, qty: toNumber(rec.Qty), country: rec["Buyer Country"], rate, sellingUsd: rate ? totalSelling / rate : toNumber(rec["Sales - Fee eBay"]), totalSelling, buying, buyingUsd: buying / USD_TO_IDR, delivery, deliveryUsd: delivery / USD_TO_IDR, tracking: rec["Tracking Code"], profit, profitUsd: profit / USD_TO_IDR, withdrawal: toNumber(rec["Total Withdrawal"]), status };
   });
 }
-
-function normalizeCostData(csv) {
-  return rowsFromCsv(csv, REQUIRED_COST_FIELDS).map(rec => {
-    const buying = toNumber(rec["Total Buying"]);
-    const delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
-    return {
-      code: rec["Transaction Code"],
-      tracking: rec["Tracking Code"],
-      buying,
-      delivery,
-      yusufBuying: toNumber(rec.Yusuf) || roundup(buying / 3),
-      shafiBuying: toNumber(rec.Shafi) || roundup(buying / 3),
-      huseinBuying: toNumber(rec.Husein) || roundup(buying / 3),
-      yusufDelivery: toNumber(rec.Yusuf2) || roundup(delivery / 3),
-      shafiDelivery: toNumber(rec.Shafi2) || roundup(delivery / 3),
-      huseinDelivery: toNumber(rec.Husein2) || roundup(delivery / 3),
-      total: buying + delivery,
-      source: "sheet",
-    };
-  }).map(r => ({
-    ...r,
-    yusuf: r.yusufBuying + r.yusufDelivery,
-    shafi: r.shafiBuying + r.shafiDelivery,
-    husein: r.huseinBuying + r.huseinDelivery,
-  })).filter(r => r.code && r.code !== "-" && r.total > 0);
+function normalizeCost(csv) {
+  return rowsFromCsv(csv, ["Transaction Code", "Tracking Code"]).map(rec => {
+    const buying = toNumber(rec["Total Buying"]), delivery = toNumber(rec["Delivery Cost (Kurasi)"]);
+    return { code: rec["Transaction Code"], tracking: rec["Tracking Code"], buying, delivery, yusuf: (toNumber(rec.Yusuf) || roundup(buying / 3)) + (toNumber(rec.Yusuf2) || roundup(delivery / 3)), shafi: (toNumber(rec.Shafi) || roundup(buying / 3)) + (toNumber(rec.Shafi2) || roundup(delivery / 3)), husein: (toNumber(rec.Husein) || roundup(buying / 3)) + (toNumber(rec.Husein2) || roundup(delivery / 3)), total: buying + delivery, source: "COST" };
+  }).filter(r => isFilled(r.code) && r.code !== "-" && r.total > 0);
+}
+function costFromSales(rows) {
+  return rows.map(r => ({ code: r.code, tracking: r.tracking, buying: r.buying, delivery: r.delivery, yusuf: roundup(r.buying / 3) + roundup(r.delivery / 3), shafi: roundup(r.buying / 3) + roundup(r.delivery / 3), husein: roundup(r.buying / 3) + roundup(r.delivery / 3), total: r.buying + r.delivery, source: "REKAP fallback" })).filter(r => isFilled(r.code) && r.total > 0);
+}
+function normalizeProfit(csv) { return rowsFromCsv(csv, ["Transaction Code", "Buyer", "Item"]).map(rec => ({ code: rec["Transaction Code"], buyer: rec.Buyer, item: rec.Item, profit: toNumber(rec.Profit), yusuf: toNumber(rec["Yusuf (30%)"]), shafi: toNumber(rec["Shafi (30%)"]), husein: toNumber(rec["Husein (30%)"]), retained: toNumber(rec["Laba ditahan (10%)"]) })).filter(r => isFilled(r.code) && r.code !== "-"); }
+function normalizeSettlement(csv) {
+  return rowsFromCsv(csv, ["Date", "Buyer", "Item", "Uang Cair dari eBay\n(IDR)", "ACTUAL\nUang Cair dari Payoneer\n(IDR)"]).map(rec => ({ date: toDate(rec.Date), dateText: rec.Date, month: monthKey(toDate(rec.Date)), buyer: rec.Buyer, item: rec.Item, country: rec["Buyer Country"], salesFeeUsd: toNumber(rec["Sales - Fee eBay"]), ebayCashIdr: toNumber(rec["Uang Cair dari eBay\n(IDR)"]), ebayCashUsd: toNumber(rec["Uang Cair dari eBay\n(USD)"]), otherCostIdr: toNumber(rec["Other Cost\n(IDR)"]), payoneerIdr: toNumber(rec["Uang Cair dari Payoneer\n(IDR)"]), actualPayoneerIdr: toNumber(rec["ACTUAL\nUang Cair dari Payoneer\n(IDR)"]), diff: toNumber(rec["Selisih Karena Rate"]), status: toNumber(rec["ACTUAL\nUang Cair dari Payoneer\n(IDR)"]) ? "Settled" : "Pending" }));
+}
+function normalizeCash(csv) { return rowsFromCsv(csv, ["Tanggal", "Keterangan", "Pemasukan", "Pengeluaran", "Sisah Saldo"]).map(rec => ({ date: toDate(rec.Tanggal), dateText: rec.Tanggal, month: monthKey(toDate(rec.Tanggal)), desc: rec.Keterangan, in: toNumber(rec.Pemasukan), out: toNumber(rec.Pengeluaran), balance: toNumber(rec["Sisah Saldo"]) })).filter(r => r.dateText || r.desc || r.in || r.out || r.balance); }
+function normalizeCapital(csv) {
+  const rows = parseCSV(csv || ""); const [header = [], ...data] = rows; const partners = [{ name: "Yusuf", start: 0 }, { name: "Shafi", start: 6 }, { name: "Husein", start: 12 }]; const out = [];
+  data.forEach(r => partners.forEach(p => { const rec = { partner: p.name, dateText: (r[p.start] || "").trim(), date: toDate(r[p.start]), desc: (r[p.start + 1] || "").trim(), in: toNumber(r[p.start + 2]), out: toNumber(r[p.start + 3]), balance: toNumber(r[p.start + 4]) }; if (rec.dateText || rec.desc || rec.in || rec.out || rec.balance) out.push(rec); }));
+  return out;
 }
 
-function normalizeProfitData(csv) {
-  return rowsFromCsv(csv, REQUIRED_PROFIT_FIELDS).map(rec => ({
-    code: rec["Transaction Code"],
-    buyer: rec.Buyer,
-    item: rec.Item,
-    profit: toNumber(rec.Profit),
-    yusuf: toNumber(rec["Yusuf (30%)"]),
-    shafi: toNumber(rec["Shafi (30%)"]),
-    husein: toNumber(rec["Husein (30%)"]),
-    retained: toNumber(rec["Laba ditahan (10%)"]),
-  })).filter(r => r.code && r.code !== "-");
-}
+function filteredSales() { const q = els.search.value.trim().toLowerCase(); return salesRows.filter(r => (els.month.value === "all" || r.month === els.month.value) && (els.country.value === "all" || r.country === els.country.value) && (!q || `${r.code} ${r.buyer} ${r.item} ${r.country} ${r.tracking} ${r.status}`.toLowerCase().includes(q))); }
+function filteredSettlement() { const q = els.search.value.trim().toLowerCase(); return settlementRows.filter(r => (els.month.value === "all" || r.month === els.month.value) && (!q || `${r.buyer} ${r.item} ${r.status}`.toLowerCase().includes(q))); }
+function filteredCash() { const q = els.search.value.trim().toLowerCase(); return cashRows.filter(r => (els.month.value === "all" || r.month === els.month.value) && (!q || `${r.desc}`.toLowerCase().includes(q))); }
+function filteredCost() { const codes = new Set(filteredSales().map(r => r.code)); return costRows.filter(r => codes.has(r.code)); }
+function fillFilters() { const months = [...new Set([...salesRows, ...settlementRows, ...cashRows].map(r => r.month).filter(Boolean))]; const countries = [...new Set(salesRows.map(r => r.country).filter(Boolean))].sort(); els.month.innerHTML = '<option value="all">Semua bulan</option>' + months.map(m => `<option>${m}</option>`).join(""); els.country.innerHTML = '<option value="all">Semua negara</option>' + countries.map(c => `<option>${c}</option>`).join(""); }
 
-function buildSheetHealth() {
-  const salesCodes = new Set(rows.map(r => r.code).filter(isFilled));
-  const costSheetCodes = new Set(costSheetRows.map(r => r.code).filter(isFilled));
-  const profitCodes = new Set(profitRows.map(r => r.code).filter(isFilled));
-  const missingCost = [...salesCodes].filter(code => !costSheetCodes.has(code));
-  const fallbackCost = costFallbackRows.map(r => r.code).filter(isFilled);
-  const fallbackCostCodes = new Set(fallbackCost);
-  const uncoveredCost = missingCost.filter(code => !fallbackCostCodes.has(code));
-  const missingProfit = [...salesCodes].filter(code => !profitCodes.has(code));
-  const staleCost = [...costSheetCodes].filter(code => !salesCodes.has(code));
-  const staleProfit = [...profitCodes].filter(code => !salesCodes.has(code));
-  const formulaMismatches = [];
-
-  profitRows.forEach(profitRow => {
-    const sale = rows.find(r => r.code === profitRow.code);
-    if (!sale) return;
-    const expected = {
-      yusuf: sale.profit * 0.3,
-      shafi: sale.profit * 0.3,
-      husein: sale.profit * 0.3,
-      retained: sale.profit * 0.1,
-    };
-    ["yusuf", "shafi", "husein", "retained"].forEach(key => {
-      if (Math.abs((profitRow[key] || 0) - expected[key]) > 1) {
-        formulaMismatches.push(`${profitRow.code} ${key}`);
-      }
-    });
-  });
-
-  sheetHealth = [
-    { label: "REKAP", status: `${rows.length} transaksi valid`, ok: rows.length > 0 },
-    { label: "COST", status: `${costSheetRows.length} sheet / ${costRows.length} total cost`, ok: uncoveredCost.length === 0, detail: missingCost.length ? `Fallback dari REKAP: ${fallbackCost.length} baris. Tanpa cost: ${uncoveredCost.length ? uncoveredCost.slice(0, 3).join(", ") : "0"}` : "Semua transaksi punya cost dari sheet" },
-    { label: "PROFIT", status: `${profitRows.length} baris profit valid`, ok: missingProfit.length === 0 && formulaMismatches.length === 0, detail: missingProfit.length ? `Belum ada profit share: ${missingProfit.slice(0, 3).join(", ")}` : (formulaMismatches.length ? `Cek rumus: ${formulaMismatches.slice(0, 3).join(", ")}` : "Rumus 30/30/30/10 sesuai") },
-  ];
-
-  if (staleCost.length || staleProfit.length) {
-    sheetHealth.push({ label: "Cleanup", status: "Ada kode lama di sheet turunan", ok: false, detail: [...staleCost, ...staleProfit].slice(0, 4).join(", ") });
-  }
-}
-
-function normalizeCostFromSales(salesRows) {
-  return salesRows.map(r => {
-    const yusuf = roundup(r.buying / 3) + roundup(r.delivery / 3);
-    const shafi = roundup(r.buying / 3) + roundup(r.delivery / 3);
-    const husein = roundup(r.buying / 3) + roundup(r.delivery / 3);
-    return {
-      code: r.code,
-      tracking: r.tracking,
-      buying: r.buying,
-      delivery: r.delivery,
-      yusuf,
-      shafi,
-      husein,
-      total: r.buying + r.delivery,
-      source: "rekap-fallback",
-    };
-  }).filter(r => r.code && r.code !== "-" && r.total > 0);
-}
-
-function filteredRows() {
-  const q = els.search.value.trim().toLowerCase();
-  return rows.filter(r => {
-    const matchMonth = els.month.value === "all" || r.month === els.month.value;
-    const matchCountry = els.country.value === "all" || r.country === els.country.value;
-    const haystack = `${r.item} ${r.buyer} ${r.tracking} ${r.code} ${r.country}`.toLowerCase();
-    return matchMonth && matchCountry && (!q || haystack.includes(q));
-  });
-}
-
-function filteredCostRows() {
-  const codes = new Set(filteredRows().map(r => r.code));
-  return costRows.filter(r => codes.has(r.code));
-}
-
-function fillFilters() {
-  const months = [...new Set(rows.map(r => r.month))];
-  const countries = [...new Set(rows.map(r => r.country).filter(Boolean))].sort();
-  els.month.innerHTML = '<option value="all">Semua bulan</option>' + months.map(m => `<option>${m}</option>`).join("");
-  els.country.innerHTML = '<option value="all">Semua negara</option>' + countries.map(c => `<option>${c}</option>`).join("");
+function buildAudit() {
+  const salesCodes = new Set(salesRows.map(r => r.code).filter(isFilled)); const costCodes = new Set(costSheetRows.map(r => r.code).filter(isFilled)); const profitCodes = new Set(profitRows.map(r => r.code).filter(isFilled)); const fallbackCodes = new Set(costFallbackRows.map(r => r.code)); auditItems = [];
+  [...salesCodes].filter(code => !costCodes.has(code)).forEach(code => auditItems.push({ level: fallbackCodes.has(code) ? "warn" : "danger", title: `COST belum lengkap: ${code}`, detail: fallbackCodes.has(code) ? "Dashboard pakai fallback dari REKAP." : "Tidak ada cost dan tidak bisa fallback." }));
+  [...salesCodes].filter(code => !profitCodes.has(code)).forEach(code => auditItems.push({ level: "danger", title: `PROFIT belum ada: ${code}`, detail: "Split profit belum tercatat di tab PROFIT." }));
+  salesRows.filter(r => r.status !== "Completed").forEach(r => auditItems.push({ level: "warn", title: `${r.status}: ${r.code}`, detail: `${r.item || "-"} / ${r.tracking || "tracking kosong"}` }));
+  settlementRows.filter(r => r.status === "Pending" && (r.salesFeeUsd || r.buyer || r.item)).forEach(r => auditItems.push({ level: "warn", title: `Settlement pending: ${r.buyer || r.item || "baris eBay"}`, detail: "Actual Payoneer belum tercatat." }));
 }
 
 function render() {
-  const data = filteredRows();
-  const totalSelling = data.reduce((sum, r) => sum + r.totalSelling, 0);
-  const totalProfit = data.reduce((sum, r) => sum + r.profit, 0);
-  els.selling.textContent = money(totalSelling);
-  els.profit.textContent = money(totalProfit);
-  els.orders.textContent = data.length.toLocaleString("id-ID");
-  els.margin.textContent = totalSelling ? `${((totalProfit / totalSelling) * 100).toFixed(1)}%` : "0%";
-  renderShares(totalProfit);
-  renderSheetHealth();
-  renderChart(data);
-  renderTopItems(data);
-  renderTable(data);
-  renderCost(filteredCostRows());
-  renderCashflow(data);
-  renderProblems(data);
-  renderItemInsights(data);
-  renderReport(data);
+  const sales = filteredSales(), settlement = filteredSettlement(), cash = filteredCash(), costs = filteredCost();
+  const totalSales = sales.reduce((s, r) => s + r.totalSelling, 0), profit = sales.reduce((s, r) => s + r.profit, 0), buying = sales.reduce((s, r) => s + r.buying, 0), delivery = sales.reduce((s, r) => s + r.delivery, 0);
+  const cashIn = cash.reduce((s, r) => s + r.in, 0), cashOut = cash.reduce((s, r) => s + r.out, 0), cashBalance = cash.length ? cash[cash.length - 1].balance : (cashRows.at(-1)?.balance || 0);
+  els.totalSales.textContent = money(totalSales); els.netProfit.textContent = money(profit); els.cashInTotal.textContent = money(cashIn); els.cashOutTotal.textContent = money(cashOut); els.cashBalance.textContent = money(cashBalance); els.auditIssueCount.textContent = auditItems.length.toLocaleString("id-ID");
+  renderHealth(sales, costs, settlement, cash, profit, totalSales, buying, delivery); renderChart(sales); renderTopItems(sales); renderSales(sales); renderSettlement(settlement); renderCash(cash); renderPartners(); renderShares(profit, costs); renderAudit(); renderReport(sales, settlement, cash, costs);
 }
-
-function renderShares(totalProfit) {
-  els.shareBase.textContent = `Dari net profit ${money(totalProfit)}`;
-  els.shareCards.innerHTML = SHARE_SPLIT.map(share => {
-    const amount = totalProfit * share.percent / 100;
-    return `
-      <article class="share-card">
-        <div>
-          <span>${share.name}</span>
-          <strong>${money(amount)}</strong>
-          <small>${dollar(amount / USD_TO_IDR)}</small>
-        </div>
-        <em>${share.percent}%</em>
-      </article>`;
-  }).join("");
+function renderHealth(sales, costs, settlement, cash, profit, totalSales, buying, delivery) {
+  const items = [
+    ["Sales", `${sales.length} transaksi / ${money(totalSales)}`, `Profit ${money(profit)} (${totalSales ? (profit / totalSales * 100).toFixed(1) : 0}%)`],
+    ["Cost", `${money(buying + delivery)} total`, `${costSheetRows.length} dari COST, ${costFallbackRows.length} fallback REKAP`],
+    ["Settlement", `${settlement.filter(r => r.status === "Settled").length} settled`, `${settlement.filter(r => r.status === "Pending").length} pending`],
+    ["Cash", `${cash.length} ledger entries`, `Saldo akhir ${money(cash.length ? cash.at(-1).balance : 0)}`],
+  ];
+  els.businessHealth.innerHTML = items.map(([a,b,c]) => `<div class="rank-item split-item"><strong>${a}</strong><span>${b}</span><small>${c}</small></div>`).join("");
 }
-
-function renderSheetHealth() {
-  const container = document.querySelector("#sheetHealth");
-  if (!container) return;
-  container.innerHTML = sheetHealth.map(item => `
-    <div class="rank-item split-item ${item.ok ? "" : "danger-item"}">
-      <strong>${item.label} - ${item.status}</strong>
-      <span>${item.detail || "Data terbaca normal"}</span>
-    </div>`).join("");
-}
-
-function renderCost(data) {
-  const totals = data.reduce((acc, r) => {
-    acc.buying += r.buying;
-    acc.delivery += r.delivery;
-    acc.yusuf += r.yusuf;
-    acc.shafi += r.shafi;
-    acc.husein += r.husein;
-    return acc;
-  }, { buying: 0, delivery: 0, yusuf: 0, shafi: 0, husein: 0 });
-  const grandTotal = totals.buying + totals.delivery;
-  els.totalBuyingCost.textContent = money(totals.buying);
-  els.totalDeliveryCost.textContent = money(totals.delivery);
-  els.totalCost.textContent = money(grandTotal);
-  els.partnerCostAvg.textContent = money(grandTotal / 3);
-  els.costBase.textContent = `${data.length} transaksi sesuai filter aktif`;
-  els.costCards.innerHTML = COST_PARTNERS.map(name => {
-    const amount = totals[name.toLowerCase()];
-    return `
-      <article class="share-card">
-        <div>
-          <span>${name}</span>
-          <strong>${money(amount)}</strong>
-          <small>${dollar(amount / USD_TO_IDR)}</small>
-        </div>
-        <em>Cost</em>
-      </article>`;
-  }).join("");
-  els.costTable.innerHTML = data.map(r => `
-    <tr>
-      <td data-label="Transaction">${r.code}</td>
-      <td data-label="Tracking">${r.tracking}</td>
-      <td data-label="Buying Cost">${moneyPair(r.buying)}</td>
-      <td data-label="Delivery Cost">${moneyPair(r.delivery)}</td>
-      <td data-label="Yusuf Share">${moneyPair(r.yusuf)}</td>
-      <td data-label="Shafi Share">${moneyPair(r.shafi)}</td>
-      <td data-label="Husein Share">${moneyPair(r.husein)}</td>
-      <td data-label="Total Cost">${moneyPair(r.total)}</td>
-    </tr>`).join("") || '<tr><td colspan="8">Data cost belum ada.</td></tr>';
-}
-
-
-function renderCashflow(data) {
-  const cashflowRows = data.filter(r => r.totalSelling || r.buying || r.delivery);
-  const cashIn = cashflowRows.reduce((sum, r) => sum + r.totalSelling, 0);
-  const cashOut = cashflowRows.reduce((sum, r) => sum + r.buying + r.delivery, 0);
-  const rates = cashflowRows.map(r => r.rate).filter(Boolean);
-  const avgRate = rates.length ? rates.reduce((sum, rate) => sum + rate, 0) / rates.length : USD_TO_IDR;
-  els.cashIn.textContent = money(cashIn);
-  els.cashOut.textContent = money(cashOut);
-  els.netCash.textContent = money(cashIn - cashOut);
-  els.avgRate.textContent = Math.round(avgRate).toLocaleString("id-ID");
-  els.cashflowList.innerHTML = cashflowRows.map(r => {
-    const out = r.buying + r.delivery;
-    const net = r.totalSelling - out;
-    const label = [r.code, r.buyer].filter(isFilled).join(" - ");
-    return `<div class="rank-item split-item">
-      <strong>${label}</strong>
-      <span>In ${money(r.totalSelling)} / Out ${money(out)} / Net ${money(net)}</span>
-    </div>`;
-  }).join("") || '<p class="subtitle">Data belum ada.</p>';
-}
-
-function renderProblems(data) {
-  const loss = data.filter(r => r.profit < 0);
-  const highDelivery = data.filter(r => r.totalSelling && r.delivery / r.totalSelling > 0.35);
-  const lowMargin = data.filter(r => r.totalSelling && r.profit >= 0 && r.profit / r.totalSelling < 0.15);
-  const problemRows = [...new Map([...loss, ...highDelivery, ...lowMargin].map(r => [r.code, r])).values()];
-  els.lossOrders.textContent = loss.length.toLocaleString("id-ID");
-  els.totalLoss.textContent = money(Math.abs(loss.reduce((sum, r) => sum + r.profit, 0)));
-  els.highDelivery.textContent = highDelivery.length.toLocaleString("id-ID");
-  els.lowMargin.textContent = lowMargin.length.toLocaleString("id-ID");
-  els.problemList.innerHTML = problemRows.map(r => {
-    const flags = [];
-    if (r.profit < 0) flags.push("Profit minus");
-    if (r.totalSelling && r.delivery / r.totalSelling > 0.35) flags.push("Delivery tinggi");
-    if (r.totalSelling && r.profit >= 0 && r.profit / r.totalSelling < 0.15) flags.push("Margin rendah");
-    return `<div class="rank-item split-item danger-item">
-      <strong>${r.code} - ${r.item}</strong>
-      <span>${flags.join(" / ")} | Profit ${money(r.profit)} | Delivery ${money(r.delivery)}</span>
-    </div>`;
-  }).join("") || '<p class="subtitle">Belum ada transaksi bermasalah dari filter ini.</p>';
-}
-
-function renderItemInsights(data) {
-  const grouped = new Map();
-  data.forEach(r => {
-    const current = grouped.get(r.item) || { item: r.item, orders: 0, qty: 0, selling: 0, profit: 0, delivery: 0 };
-    current.orders += 1;
-    current.qty += r.qty;
-    current.selling += r.totalSelling;
-    current.profit += r.profit;
-    current.delivery += r.delivery;
-    grouped.set(r.item, current);
-  });
-  const insights = [...grouped.values()].sort((a, b) => b.profit - a.profit);
-  els.itemInsights.innerHTML = insights.map(item => {
-    const margin = item.selling ? `${((item.profit / item.selling) * 100).toFixed(1)}%` : "0%";
-    return `<div class="rank-item split-item">
-      <strong>${item.item}</strong>
-      <span>${item.orders} order / Qty ${item.qty} / Profit ${money(item.profit)} / Margin ${margin} / Delivery ${money(item.delivery)}</span>
-    </div>`;
-  }).join("") || '<p class="subtitle">Data item belum ada.</p>';
-}
-
-function renderReport(data) {
-  const totalSelling = data.reduce((sum, r) => sum + r.totalSelling, 0);
-  const totalProfit = data.reduce((sum, r) => sum + r.profit, 0);
-  const totalBuying = data.reduce((sum, r) => sum + r.buying, 0);
-  const totalDelivery = data.reduce((sum, r) => sum + r.delivery, 0);
-  const totalCost = totalBuying + totalDelivery;
-  const margin = totalSelling ? `${((totalProfit / totalSelling) * 100).toFixed(1)}%` : "0%";
-  const monthLabel = els.month.value === "all" ? "Semua bulan" : els.month.value;
-  const countryLabel = els.country.value === "all" ? "Semua negara" : els.country.value;
-  const topItems = [...data]
-    .sort((a, b) => b.profit - a.profit)
-    .slice(0, 5)
-    .map((r, index) => `<tr><td>${index + 1}</td><td>${r.item}</td><td>${r.buyer}</td><td>${money(r.totalSelling)}</td><td>${money(r.profit)}</td></tr>`)
-    .join("") || '<tr><td colspan="5">Data belum ada.</td></tr>';
-  const shareRows = SHARE_SPLIT.map(share => {
-    const amount = totalProfit * share.percent / 100;
-    return `<tr><td>${share.name}</td><td>${share.percent}%</td><td>${money(amount)}</td></tr>`;
-  }).join("");
-
-  els.reportSummary.innerHTML = `
-    <div class="report-cover">
-      <img src="assets/logo.png" alt="HB Auto Parts" />
-      <div>
-        <p class="eyebrow">Monthly Business Report</p>
-        <h2>HB Auto Parts</h2>
-        <span>${monthLabel} / ${countryLabel} / ${new Date().toLocaleDateString("id-ID")}</span>
-      </div>
-    </div>
-    <div class="report-grid">
-      <div class="report-tile"><span>Total Order</span><strong>${data.length.toLocaleString("id-ID")}</strong></div>
-      <div class="report-tile"><span>Total Selling</span><strong>${money(totalSelling)}</strong></div>
-      <div class="report-tile"><span>Total Cost</span><strong>${money(totalCost)}</strong></div>
-      <div class="report-tile"><span>Net Profit</span><strong>${money(totalProfit)}</strong></div>
-      <div class="report-tile"><span>Margin</span><strong>${margin}</strong></div>
-      <div class="report-tile"><span>Buying / Delivery</span><strong>${money(totalBuying)} / ${money(totalDelivery)}</strong></div>
-    </div>
-    <div class="report-section">
-      <h3>Profit Share</h3>
-      <table class="report-table"><thead><tr><th>Partner</th><th>Percent</th><th>Amount</th></tr></thead><tbody>${shareRows}</tbody></table>
-    </div>
-    <div class="report-section">
-      <h3>Top Profit Transactions</h3>
-      <table class="report-table"><thead><tr><th>#</th><th>Item</th><th>Buyer</th><th>Selling</th><th>Profit</th></tr></thead><tbody>${topItems}</tbody></table>
-    </div>`;
-}
-
-function renderChart(data) {
-  const grouped = new Map();
-  data.forEach(r => grouped.set(r.month, (grouped.get(r.month) || 0) + r.profit));
-  const entries = [...grouped.entries()];
-  const max = Math.max(...entries.map(([, v]) => Math.abs(v)), 1);
-  els.chart.innerHTML = entries.map(([label, value]) => `
-    <div class="bar-row">
-      <strong>${label}</strong>
-      <div class="track"><div class="fill" style="width:${Math.max(Math.abs(value) / max * 100, 3)}%"></div></div>
-      <span class="${value >= 0 ? "profit-pos" : "profit-neg"}">${money(value)}</span>
-    </div>`).join("") || '<p class="subtitle">Data belum ada.</p>';
-}
-
-function renderTopItems(data) {
-  const grouped = new Map();
-  data.forEach(r => grouped.set(r.item, (grouped.get(r.item) || 0) + r.profit));
-  const top = [...grouped.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
-  els.topItems.innerHTML = top.map(([item, profit], index) => `
-    <div class="rank-item">
-      <strong>${index + 1}. ${item}</strong>
-      <span>${money(profit)}</span>
-    </div>`).join("") || '<p class="subtitle">Data belum ada.</p>';
-}
-
-function renderTable(data) {
-  els.table.innerHTML = data.map(r => `
-    <tr>
-      <td data-label="Date">${isFilled(r.dateText) ? r.dateText : ""}</td>
-      <td data-label="Buyer">${isFilled(r.buyer) ? r.buyer : ""}</td>
-      <td data-label="Item">${isFilled(r.item) ? r.item : ""}</td>
-      <td data-label="Country">${isFilled(r.country) ? r.country : ""}</td>
-      <td data-label="Selling">${r.totalSelling || r.sellingUsd ? moneyPair(r.totalSelling, r.sellingUsd) : ""}</td>
-      <td data-label="Buying">${r.buying ? moneyPair(r.buying, r.buyingUsd) : ""}</td>
-      <td data-label="Delivery">${r.delivery ? moneyPair(r.delivery, r.deliveryUsd) : ""}</td>
-      <td data-label="Profit" class="${r.profit >= 0 ? "profit-pos" : "profit-neg"}">${r.profit ? moneyPair(r.profit, r.profitUsd) : ""}</td>
-    </tr>`).join("");
-}
-
-async function fetchCsv(url) {
-  const res = await fetch(`${url}&cacheBust=${Date.now()}`);
-  if (!res.ok) throw new Error(`Google Sheet tidak bisa dibaca (${res.status})`);
-  return res.text();
-}
+function renderChart(data) { const grouped = new Map(); data.forEach(r => grouped.set(r.month, (grouped.get(r.month) || 0) + r.profit)); const entries = [...grouped.entries()]; const max = Math.max(...entries.map(([, v]) => Math.abs(v)), 1); els.monthlyChart.innerHTML = entries.map(([label, value]) => `<div class="bar-row"><strong>${label}</strong><div class="track"><div class="fill" style="width:${Math.max(Math.abs(value) / max * 100, 3)}%"></div></div><span class="${value >= 0 ? "profit-pos" : "profit-neg"}">${money(value)}</span></div>`).join("") || '<p class="subtitle">Data belum ada.</p>'; }
+function renderTopItems(data) { const grouped = new Map(); data.forEach(r => { const cur = grouped.get(r.item) || { profit: 0, sales: 0, qty: 0 }; cur.profit += r.profit; cur.sales += r.totalSelling; cur.qty += r.qty; grouped.set(r.item, cur); }); els.topItems.innerHTML = [...grouped.entries()].sort((a,b)=>b[1].profit-a[1].profit).slice(0,6).map(([item,v],i)=>`<div class="rank-item"><strong>${i+1}. ${item}</strong><span>${money(v.profit)} / ${v.qty} pcs</span></div>`).join("") || '<p class="subtitle">Data belum ada.</p>'; }
+function renderSales(data) { els.salesCount.textContent = `${data.length} transaksi`; els.salesTable.innerHTML = data.map(r => `<tr><td data-label="Date">${r.dateText}</td><td data-label="Code">${r.code}</td><td data-label="Buyer">${r.buyer}</td><td data-label="Item">${r.item}</td><td data-label="Country">${r.country}</td><td data-label="Selling">${moneyPair(r.totalSelling, r.sellingUsd)}</td><td data-label="Buying">${r.buying ? moneyPair(r.buying) : ""}</td><td data-label="Delivery">${r.delivery ? moneyPair(r.delivery) : ""}</td><td data-label="Profit" class="${r.profit >= 0 ? "profit-pos" : "profit-neg"}">${moneyPair(r.profit)}</td><td data-label="Status"><span class="status-pill ${r.status === "Completed" ? "ok" : "warn"}">${r.status}</span></td></tr>`).join("") || '<tr><td colspan="10">Data belum ada.</td></tr>'; }
+function renderSettlement(data) { const ebay = data.reduce((s,r)=>s+r.ebayCashIdr,0), actual = data.reduce((s,r)=>s+r.actualPayoneerIdr,0), other = data.reduce((s,r)=>s+r.otherCostIdr,0), diff = data.reduce((s,r)=>s+r.diff,0); els.ebayCash.textContent = money(ebay); els.payoneerActual.textContent = money(actual); els.otherCostActual.textContent = money(other); els.rateDiff.textContent = money(diff); els.settlementCount.textContent = `${data.length} baris`; els.settlementTable.innerHTML = data.map(r=>`<tr><td data-label="Date">${r.dateText}</td><td data-label="Buyer">${r.buyer}</td><td data-label="Item">${r.item}</td><td data-label="Sales Fee">${dollar(r.salesFeeUsd)}</td><td data-label="eBay Cash">${r.ebayCashIdr ? moneyPair(r.ebayCashIdr, r.ebayCashUsd) : ""}</td><td data-label="Other Cost">${r.otherCostIdr ? money(r.otherCostIdr) : ""}</td><td data-label="Payoneer">${r.payoneerIdr ? money(r.payoneerIdr) : ""}</td><td data-label="Actual">${r.actualPayoneerIdr ? money(r.actualPayoneerIdr) : ""}</td><td data-label="Selisih">${r.diff ? money(r.diff) : ""}</td><td data-label="Status"><span class="status-pill ${r.status === "Settled" ? "ok" : "warn"}">${r.status}</span></td></tr>`).join("") || '<tr><td colspan="10">Data belum ada.</td></tr>'; }
+function renderCash(data) { const cashIn = data.reduce((s,r)=>s+r.in,0), cashOut = data.reduce((s,r)=>s+r.out,0), balance = data.length ? data.at(-1).balance : 0; els.cashInPage.textContent = money(cashIn); els.cashOutPage.textContent = money(cashOut); els.cashBalancePage.textContent = money(balance); els.cashRowsCount.textContent = data.length.toLocaleString("id-ID"); els.cashTimeline.innerHTML = data.slice().reverse().map(r=>`<div class="rank-item split-item"><strong>${r.dateText} - ${r.desc || "-"}</strong><span>Masuk ${money(r.in)} / Keluar ${money(r.out)} / Saldo ${money(r.balance)}</span></div>`).join("") || '<p class="subtitle">Data belum ada.</p>'; }
+function renderPartners() { const latest = PARTNERS.map(name => capitalRows.filter(r=>r.partner===name).at(-1) || { partner:name, balance:0, in:0, out:0 }); els.partnerCards.innerHTML = latest.map(r=>`<article class="metric"><span>${r.partner}</span><strong>${money(r.balance)}</strong><small>Saldo modal terakhir</small></article>`).join(""); els.partnerTable.innerHTML = capitalRows.map(r=>`<tr><td data-label="Partner">${r.partner}</td><td data-label="Date">${r.dateText}</td><td data-label="Keterangan">${r.desc}</td><td data-label="Pemasukan">${r.in ? money(r.in) : ""}</td><td data-label="Pengeluaran">${r.out ? money(r.out) : ""}</td><td data-label="Saldo">${money(r.balance)}</td></tr>`).join("") || '<tr><td colspan="6">Data belum ada.</td></tr>'; }
+function renderShares(totalProfit, costs) { els.shareBase.textContent = `Dari profit ${money(totalProfit)}`; els.shareCards.innerHTML = PROFIT_SPLIT.map(s=>{ const amount=totalProfit*s.percent/100; return `<article class="share-card"><div><span>${s.name}</span><strong>${money(amount)}</strong><small>${s.percent}% / ${dollar(amount/USD_TO_IDR)}</small></div><em>${s.percent}%</em></article>`; }).join(""); const totals = costs.reduce((a,r)=>{ a.yusuf+=r.yusuf; a.shafi+=r.shafi; a.husein+=r.husein; a.total+=r.total; return a; }, { yusuf:0, shafi:0, husein:0, total:0 }); els.costBase.textContent = `${costs.length} transaksi / ${money(totals.total)}`; els.costCards.innerHTML = PARTNERS.map(name=>`<article class="share-card"><div><span>${name}</span><strong>${money(totals[name.toLowerCase()])}</strong><small>Beban cost</small></div><em>Cost</em></article>`).join(""); els.costTable.innerHTML = costs.map(r=>`<tr><td data-label="Code">${r.code}</td><td data-label="Tracking">${r.tracking}</td><td data-label="Buying">${moneyPair(r.buying)}</td><td data-label="Delivery">${moneyPair(r.delivery)}</td><td data-label="Yusuf">${money(r.yusuf)}</td><td data-label="Shafi">${money(r.shafi)}</td><td data-label="Husein">${money(r.husein)}</td><td data-label="Source">${r.source}</td></tr>`).join("") || '<tr><td colspan="8">Data belum ada.</td></tr>'; }
+function renderAudit() { els.auditCount.textContent = `${auditItems.length} issue`; els.auditList.innerHTML = auditItems.map(i=>`<div class="rank-item split-item ${i.level === "danger" ? "danger-item" : "warn-item"}"><strong>${i.title}</strong><span>${i.detail}</span></div>`).join("") || '<p class="subtitle">Data health aman.</p>'; }
+function renderReport(sales, settlement, cash, costs) { const totalSales=sales.reduce((s,r)=>s+r.totalSelling,0), profit=sales.reduce((s,r)=>s+r.profit,0), totalCost=costs.reduce((s,r)=>s+r.total,0), actual=settlement.reduce((s,r)=>s+r.actualPayoneerIdr,0), balance=cash.length?cash.at(-1).balance:0; els.reportSummary.innerHTML = `<div class="report-cover"><img src="assets/logo.png" alt="HB Auto Parts" /><div><p class="eyebrow">Monthly Business Report</p><h2>HB Auto Parts</h2><span>${els.month.value === "all" ? "Semua bulan" : els.month.value} / ${new Date().toLocaleDateString("id-ID")}</span></div></div><div class="report-grid"><div class="report-tile"><span>Total Order</span><strong>${sales.length}</strong></div><div class="report-tile"><span>Total Sales</span><strong>${money(totalSales)}</strong></div><div class="report-tile"><span>Total Cost</span><strong>${money(totalCost)}</strong></div><div class="report-tile"><span>Net Profit</span><strong>${money(profit)}</strong></div><div class="report-tile"><span>Payoneer Actual</span><strong>${money(actual)}</strong></div><div class="report-tile"><span>Saldo Cash</span><strong>${money(balance)}</strong></div></div><div class="report-section"><h3>Audit Summary</h3><p>${auditItems.length} issue perlu dicek. Cost sheet ${costSheetRows.length}, fallback ${costFallbackRows.length}, profit rows ${profitRows.length}.</p></div>`; }
 
 async function loadData() {
   els.status.textContent = "Mengambil data";
-  const [rekapCsv, costCsv, profitCsv] = await Promise.all([
-    fetchCsv(REKAP_CSV_URL),
-    fetchCsv(COST_CSV_URL).catch(() => ""),
-    fetchCsv(PROFIT_CSV_URL).catch(() => ""),
-  ]);
-  rows = normalizeData(rekapCsv);
-  costSheetRows = costCsv ? normalizeCostData(costCsv) : [];
-  const costSheetCodes = new Set(costSheetRows.map(r => r.code));
-  costFallbackRows = normalizeCostFromSales(rows).filter(r => !costSheetCodes.has(r.code));
-  costRows = [...costSheetRows, ...costFallbackRows];
-  profitRows = profitCsv ? normalizeProfitData(profitCsv) : [];
-  buildSheetHealth();
-  fillFilters();
-  render();
-  els.status.textContent = `${rows.length} sales loaded`;
-  els.updated.textContent = `Update: ${new Date().toLocaleString("id-ID")}`;
+  const [rekapCsv, costCsv, profitCsv, capitalCsv, settlementCsv, cashCsv] = await Promise.all([fetchCsv(TABS.rekap), fetchCsv(TABS.cost).catch(()=>""), fetchCsv(TABS.profit).catch(()=>""), fetchCsv(TABS.capital).catch(()=>""), fetchCsv(TABS.settlement).catch(()=>""), fetchCsv(TABS.cash).catch(()=>"")]);
+  salesRows = normalizeSales(rekapCsv); costSheetRows = normalizeCost(costCsv); const costCodes = new Set(costSheetRows.map(r=>r.code)); costFallbackRows = costFromSales(salesRows).filter(r=>!costCodes.has(r.code)); costRows = [...costSheetRows, ...costFallbackRows]; profitRows = normalizeProfit(profitCsv); capitalRows = normalizeCapital(capitalCsv); settlementRows = normalizeSettlement(settlementCsv); cashRows = normalizeCash(cashCsv); buildAudit(); fillFilters(); render(); els.status.textContent = `${salesRows.length} sales loaded`; els.updated.textContent = `Update: ${new Date().toLocaleString("id-ID")}`;
 }
+function applyTheme(choice) { const theme = choice === "system" ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : choice; document.documentElement.dataset.theme = theme; els.themeButtons.forEach(b => b.classList.toggle("active", b.dataset.themeChoice === choice)); }
+function setTheme(choice) { localStorage.setItem("hb-theme", choice); applyTheme(choice); }
+function setPage(page) { Object.entries(els.pages).forEach(([key, el]) => el.classList.toggle("active", key === page)); els.navLinks.forEach(link => link.classList.toggle("active", link.dataset.pageLink === page)); }
+function showError(error) { console.error(error); els.status.textContent = "Gagal load data"; els.updated.textContent = error.message; }
 
-function applyTheme(choice) {
-  const theme = choice === "system"
-    ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
-    : choice;
-  document.documentElement.dataset.theme = theme;
-  els.themeButtons.forEach(button => button.classList.toggle("active", button.dataset.themeChoice === choice));
-}
-
-function setTheme(choice) {
-  localStorage.setItem("hb-theme", choice);
-  applyTheme(choice);
-}
-
-function setPage(page) {
-  els.dashboardPage.classList.toggle("active", page === "dashboard");
-  els.profitSharePage.classList.toggle("active", page === "profit-share");
-  els.costSharePage.classList.toggle("active", page === "cost-share");
-  els.cashflowPage.classList.toggle("active", page === "cashflow");
-  els.problemsPage.classList.toggle("active", page === "problems");
-  els.itemsPage.classList.toggle("active", page === "items");
-  els.reportsPage.classList.toggle("active", page === "reports");
-  els.navLinks.forEach(link => link.classList.toggle("active", link.dataset.pageLink === page));
-}
-
-els.navLinks.forEach(link => link.addEventListener("click", event => {
-  event.preventDefault();
-  const page = link.dataset.pageLink;
-  history.replaceState(null, "", `#${page}`);
-  setPage(page);
-}));
-
+els.navLinks.forEach(link => link.addEventListener("click", event => { event.preventDefault(); const page = link.dataset.pageLink; history.replaceState(null, "", `#${page}`); setPage(page); }));
 [els.month, els.country, els.search].forEach(el => el.addEventListener("input", render));
 els.refresh.addEventListener("click", () => loadData().catch(showError));
 els.themeButtons.forEach(button => button.addEventListener("click", () => setTheme(button.dataset.themeChoice)));
-window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
-  if ((localStorage.getItem("hb-theme") || "system") === "system") applyTheme("system");
-});
-const validPages = ["#profit-share", "#cost-share", "#cashflow", "#problems", "#items", "#reports"];
-setPage(validPages.includes(location.hash) ? location.hash.slice(1) : "dashboard");
-applyTheme(localStorage.getItem("hb-theme") || "system");
+window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { if ((localStorage.getItem("hb-theme") || "system") === "system") applyTheme("system"); });
 els.printReport.addEventListener("click", () => window.print());
-
-function showError(error) {
-  console.error(error);
-  els.status.textContent = "Gagal load data";
-  els.updated.textContent = error.message;
-}
-
-loadData().catch(showError);
+const validPages = Object.keys(els.pages).map(p => `#${p}`); setPage(validPages.includes(location.hash) ? location.hash.slice(1) : "dashboard"); applyTheme(localStorage.getItem("hb-theme") || "system"); loadData().catch(showError);

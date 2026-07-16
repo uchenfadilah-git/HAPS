@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HB Auto Parts Dashboard</title>
+  <title>HB Auto Parts Business Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -20,11 +20,12 @@
       <a href="#dashboard" class="brand-mark" data-page-link="dashboard" aria-label="HB Auto Parts dashboard"><img src="assets/logo.png" alt="HB Auto Parts" /></a>
       <div class="nav-menu">
         <a href="#dashboard" class="nav-link active" data-page-link="dashboard">Dashboard</a>
-        <a href="#profit-share" class="nav-link" data-page-link="profit-share">Pembagian Profit</a>
-        <a href="#cost-share" class="nav-link" data-page-link="cost-share">Pembagian Cost</a>
-        <a href="#cashflow" class="nav-link" data-page-link="cashflow">Cashflow</a>
-        <a href="#problems" class="nav-link" data-page-link="problems">Problem/Loss</a>
-        <a href="#items" class="nav-link" data-page-link="items">Item Insight</a>
+        <a href="#sales" class="nav-link" data-page-link="sales">Sales</a>
+        <a href="#settlement" class="nav-link" data-page-link="settlement">eBay/Payoneer</a>
+        <a href="#cash" class="nav-link" data-page-link="cash">Saldo Cash</a>
+        <a href="#partners" class="nav-link" data-page-link="partners">Permodalan</a>
+        <a href="#share" class="nav-link" data-page-link="share">Profit & Cost</a>
+        <a href="#audit" class="nav-link" data-page-link="audit">Audit</a>
         <a href="#reports" class="nav-link" data-page-link="reports">Report</a>
       </div>
       <div class="theme-switch" aria-label="Theme mode">
@@ -44,159 +45,63 @@
     </section>
 
     <section class="toolbar" aria-label="Filter dashboard">
-      <label>
-        Bulan
-        <select id="monthFilter"><option value="all">Semua bulan</option></select>
-      </label>
-      <label>
-        Negara
-        <select id="countryFilter"><option value="all">Semua negara</option></select>
-      </label>
-      <label>
-        Cari
-        <input id="searchInput" type="search" placeholder="Item, buyer, tracking..." />
-      </label>
+      <label>Bulan<select id="monthFilter"><option value="all">Semua bulan</option></select></label>
+      <label>Negara<select id="countryFilter"><option value="all">Semua negara</option></select></label>
+      <label>Cari<input id="searchInput" type="search" placeholder="Kode, buyer, item, tracking, keterangan..." /></label>
       <button id="refreshBtn" type="button">Refresh Data</button>
     </section>
 
     <section id="dashboardPage" class="page-view active">
-      <section class="metrics" aria-label="Ringkasan performa">
-        <article class="metric accent"><span>Total Selling</span><strong id="totalSelling">IDR 0</strong><small>Omset total</small></article>
-        <article class="metric"><span>Net Profit</span><strong id="netProfit">IDR 0</strong><small>Profit bersih</small></article>
-        <article class="metric"><span>Total Order</span><strong id="totalOrders">0</strong><small>Transaksi masuk</small></article>
-        <article class="metric"><span>Margin</span><strong id="margin">0%</strong><small>Profit / selling</small></article>
+      <section class="metrics metrics-six" aria-label="Ringkasan bisnis">
+        <article class="metric accent"><span>Total Sales</span><strong id="totalSales">IDR 0</strong><small>REKAP filtered</small></article>
+        <article class="metric"><span>Net Profit</span><strong id="netProfit">IDR 0</strong><small>Sales - modal - delivery</small></article>
+        <article class="metric"><span>Cash In</span><strong id="cashInTotal">IDR 0</strong><small>Saldo Cash</small></article>
+        <article class="metric"><span>Cash Out</span><strong id="cashOutTotal">IDR 0</strong><small>Saldo Cash</small></article>
+        <article class="metric"><span>Saldo Cash</span><strong id="cashBalance">IDR 0</strong><small>Saldo terakhir</small></article>
+        <article class="metric"><span>Audit Issues</span><strong id="auditIssueCount">0</strong><small>Data perlu dicek</small></article>
       </section>
+      <section class="grid grid-three">
+        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Business Health</p><h2>Ringkasan Operasional</h2></div></div><div id="businessHealth" class="rank-list"></div></article>
+        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Trend</p><h2>Profit per Bulan</h2></div></div><div id="monthlyChart" class="bars"></div></article>
+        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Ranking</p><h2>Top Item Profit</h2></div></div><div id="topItems" class="rank-list"></div></article>
+      </section>
+    </section>
 
+    <section id="salesPage" class="page-view">
+      <section class="panel table-panel"><div class="panel-head"><div><p class="eyebrow">REKAP</p><h2>Sales & Profit</h2></div><span id="salesCount" class="pill">0 transaksi</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Code</th><th>Buyer</th><th>Item</th><th>Country</th><th>Selling</th><th>Buying</th><th>Delivery</th><th>Profit</th><th>Status</th></tr></thead><tbody id="salesTable"></tbody></table></div></section>
+    </section>
+
+    <section id="settlementPage" class="page-view">
+      <section class="metrics"><article class="metric accent"><span>eBay Cash</span><strong id="ebayCash">IDR 0</strong><small>Uang cair eBay</small></article><article class="metric"><span>Payoneer Actual</span><strong id="payoneerActual">IDR 0</strong><small>ACTUAL cair</small></article><article class="metric"><span>Other Cost</span><strong id="otherCostActual">IDR 0</strong><small>Biaya aktual</small></article><article class="metric"><span>Selisih Rate</span><strong id="rateDiff">IDR 0</strong><small>Aktual - kalkulasi</small></article></section>
+      <section class="panel table-panel"><div class="panel-head"><div><p class="eyebrow">Pencatatan eBay</p><h2>Settlement eBay / Payoneer</h2></div><span id="settlementCount" class="pill">0 baris</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Buyer</th><th>Item</th><th>Sales Fee</th><th>eBay Cash</th><th>Other Cost</th><th>Payoneer</th><th>Actual</th><th>Selisih</th><th>Status</th></tr></thead><tbody id="settlementTable"></tbody></table></div></section>
+    </section>
+
+    <section id="cashPage" class="page-view">
+      <section class="metrics"><article class="metric accent"><span>Pemasukan</span><strong id="cashInPage">IDR 0</strong><small>Saldo Cash</small></article><article class="metric"><span>Pengeluaran</span><strong id="cashOutPage">IDR 0</strong><small>Saldo Cash</small></article><article class="metric"><span>Saldo Akhir</span><strong id="cashBalancePage">IDR 0</strong><small>Baris terakhir</small></article><article class="metric"><span>Transaksi Kas</span><strong id="cashRowsCount">0</strong><small>Ledger entries</small></article></section>
+      <section class="panel table-panel"><div class="panel-head"><div><p class="eyebrow">Saldo Cash</p><h2>Cash Ledger</h2></div></div><div id="cashTimeline" class="rank-list ledger-list"></div></section>
+    </section>
+
+    <section id="partnersPage" class="page-view">
+      <section id="partnerCards" class="metrics"></section>
+      <section class="panel table-panel"><div class="panel-head"><div><p class="eyebrow">Permodalan</p><h2>Partner Capital Ledger</h2></div></div><div class="table-wrap"><table><thead><tr><th>Partner</th><th>Date</th><th>Keterangan</th><th>Pemasukan</th><th>Pengeluaran</th><th>Saldo</th></tr></thead><tbody id="partnerTable"></tbody></table></div></section>
+    </section>
+
+    <section id="sharePage" class="page-view">
       <section class="grid">
-        <article class="panel">
-          <div class="panel-head">
-            <div><p class="eyebrow">Sheet Check</p><h2>Status Rumus</h2></div>
-          </div>
-          <div id="sheetHealth" class="rank-list"></div>
-        </article>
-
-        <article class="panel chart-panel">
-          <div class="panel-head">
-            <div><p class="eyebrow">Trend</p><h2>Profit per Bulan</h2></div>
-          </div>
-          <div id="monthlyChart" class="bars"></div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-head">
-            <div><p class="eyebrow">Ranking</p><h2>Top Item Profit</h2></div>
-          </div>
-          <div id="topItems" class="rank-list"></div>
-        </article>
+        <article class="panel share-panel"><div class="panel-head"><div><p class="eyebrow">Hak Profit</p><h2>Simulasi Profit 30/30/30/10</h2></div><span id="shareBase" class="pill">Dari net profit</span></div><div id="shareCards" class="share-cards"></div></article>
+        <article class="panel share-panel"><div class="panel-head"><div><p class="eyebrow">Beban Cost</p><h2>Cost Share 3 Partner</h2></div><span id="costBase" class="pill">Dari COST + fallback</span></div><div id="costCards" class="share-cards three"></div></article>
       </section>
-
-      <section class="panel table-panel">
-        <div class="panel-head">
-          <div><p class="eyebrow">Detail</p><h2>Daftar Penjualan</h2></div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th><th>Buyer</th><th>Item</th><th>Country</th><th>Selling</th><th>Buying</th><th>Delivery</th><th>Profit</th>
-              </tr>
-            </thead>
-            <tbody id="salesTable"></tbody>
-          </table>
-        </div>
-      </section>
+      <section class="panel table-panel"><div class="panel-head"><div><p class="eyebrow">Cost Detail</p><h2>Buying + Delivery Split</h2></div></div><div class="table-wrap"><table><thead><tr><th>Code</th><th>Tracking</th><th>Buying</th><th>Delivery</th><th>Yusuf</th><th>Shafi</th><th>Husein</th><th>Source</th></tr></thead><tbody id="costTable"></tbody></table></div></section>
     </section>
 
-    <section id="profitSharePage" class="page-view">
-      <section class="panel share-panel share-landing">
-        <div class="panel-head">
-          <div><p class="eyebrow">Menu Terpisah</p><h2>Pembagian Profit</h2></div>
-          <span id="shareBase" class="pill">Dari net profit</span>
-        </div>
-        <p class="subtitle">Halaman khusus buat lihat pembagian profit partner dari data yang sedang terfilter.</p>
-        <div id="shareCards" class="share-cards"></div>
-      </section>
-    </section>
-
-    <section id="costSharePage" class="page-view">
-      <section class="metrics cost-metrics" aria-label="Ringkasan cost">
-        <article class="metric accent"><span>Total Buying</span><strong id="totalBuyingCost">IDR 0</strong><small>Modal barang</small></article>
-        <article class="metric"><span>Total Delivery</span><strong id="totalDeliveryCost">IDR 0</strong><small>Kurasi / ongkir</small></article>
-        <article class="metric"><span>Total Cost</span><strong id="totalCost">IDR 0</strong><small>Buying + delivery</small></article>
-        <article class="metric"><span>Per Partner</span><strong id="partnerCostAvg">IDR 0</strong><small>Rata-rata beban</small></article>
-      </section>
-
-      <section class="panel share-panel">
-        <div class="panel-head">
-          <div><p class="eyebrow">Cost Share</p><h2>Pembagian Cost Partner</h2></div>
-          <span id="costBase" class="pill">Dari data transaksi</span>
-        </div>
-        <p class="subtitle cost-note">Rumus: Total Cost = Buying Cost + Delivery Cost, lalu dibagi rata ke Yusuf, Shafi, dan Husein.</p>
-        <div id="costCards" class="share-cards"></div>
-      </section>
-
-      <section class="panel table-panel">
-        <div class="panel-head">
-          <div><p class="eyebrow">Detail</p><h2>Table Cost</h2></div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Transaction</th><th>Tracking</th><th>Buying Cost</th><th>Delivery Cost</th><th>Yusuf Share</th><th>Shafi Share</th><th>Husein Share</th><th>Total Cost</th>
-              </tr>
-            </thead>
-            <tbody id="costTable"></tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-
-
-    <section id="cashflowPage" class="page-view">
-      <section class="metrics" aria-label="Cashflow summary">
-        <article class="metric accent"><span>Cash In</span><strong id="cashIn">IDR 0</strong><small>Total selling</small></article>
-        <article class="metric"><span>Cash Out</span><strong id="cashOut">IDR 0</strong><small>Buying + delivery</small></article>
-        <article class="metric"><span>Net Cash</span><strong id="netCash">IDR 0</strong><small>Cash in - cash out</small></article>
-        <article class="metric"><span>Avg Rate</span><strong id="avgRate">0</strong><small>Kurs dari sheet</small></article>
-      </section>
-      <section class="panel table-panel">
-        <div class="panel-head"><div><p class="eyebrow">Cashflow</p><h2>Arus Kas Transaksi</h2></div></div>
-        <div id="cashflowList" class="rank-list"></div>
-      </section>
-    </section>
-
-    <section id="problemsPage" class="page-view">
-      <section class="metrics" aria-label="Problem summary">
-        <article class="metric accent"><span>Loss Orders</span><strong id="lossOrders">0</strong><small>Profit minus</small></article>
-        <article class="metric"><span>Total Loss</span><strong id="totalLoss">IDR 0</strong><small>Akumulasi rugi</small></article>
-        <article class="metric"><span>High Delivery</span><strong id="highDelivery">0</strong><small>Delivery tinggi</small></article>
-        <article class="metric"><span>Low Margin</span><strong id="lowMargin">0</strong><small>Margin di bawah 15%</small></article>
-      </section>
-      <section class="panel table-panel">
-        <div class="panel-head"><div><p class="eyebrow">Risk Watch</p><h2>Problem / Loss</h2></div></div>
-        <div id="problemList" class="rank-list"></div>
-      </section>
-    </section>
-
-    <section id="itemsPage" class="page-view">
-      <section class="panel table-panel">
-        <div class="panel-head"><div><p class="eyebrow">Product Intelligence</p><h2>Item Insight</h2></div></div>
-        <div id="itemInsights" class="rank-list"></div>
-      </section>
+    <section id="auditPage" class="page-view">
+      <section class="panel"><div class="panel-head"><div><p class="eyebrow">Data Health</p><h2>Audit Sheet</h2></div><span id="auditCount" class="pill">0 issue</span></div><div id="auditList" class="rank-list"></div></section>
     </section>
 
     <section id="reportsPage" class="page-view">
-      <section class="panel table-panel report-card">
-        <div class="panel-head">
-          <div><p class="eyebrow">HB Auto Parts Report</p><h2>Report Bulanan</h2></div>
-          <button id="printReportBtn" type="button">Print / Save PDF</button>
-        </div>
-        <div id="reportSummary" class="report-summary"></div>
-      </section>
+      <section class="panel table-panel report-card"><div class="panel-head"><div><p class="eyebrow">HB Auto Parts Report</p><h2>Report Bulanan</h2></div><button id="printReportBtn" type="button">Print / Save PDF</button></div><div id="reportSummary" class="report-summary"></div></section>
     </section>
   </main>
-
   <script src="app.js"></script>
 </body>
 </html>
