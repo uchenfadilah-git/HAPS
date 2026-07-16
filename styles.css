@@ -111,13 +111,17 @@ button { min-height: 46px; border: 0; border-radius: 999px; padding: 12px 18px; 
 .page-view.active { display: block; }
 .panel { border-radius: 30px; padding: 22px; }
 .panel-head { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 18px; }
-.share-panel { margin-bottom: 16px; }
+.share-page { display: none; gap: 16px; }
+.share-page.active { display: grid; grid-template-columns: minmax(0, 1fr); }
+.share-panel { margin-bottom: 0; }
 .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 9px 13px; background: rgba(255, 122, 0, .14); color: #ffb36b; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
 .cost-note { margin: -4px 0 18px; }
-.share-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-.share-card { display: flex; justify-content: space-between; gap: 14px; align-items: center; min-height: 116px; border-radius: 22px; padding: 18px; background: linear-gradient(135deg, rgba(255,122,0,.16), rgba(255,255,255,.045)); border: 1px solid rgba(255,122,0,.22); }
+.share-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.profit-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.partner-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.share-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: space-between; gap: 14px; align-items: center; min-height: 116px; border-radius: 22px; padding: 18px; background: linear-gradient(135deg, rgba(255,122,0,.16), rgba(255,255,255,.045)); border: 1px solid rgba(255,122,0,.22); }
 .share-card span { display: block; color: var(--muted); font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
-.share-card strong { display: block; margin-top: 8px; font-family: "Barlow Condensed"; font-size: clamp(25px, 3vw, 38px); letter-spacing: -0.02em; }
+.share-card strong { display: block; margin-top: 8px; min-width: 0; overflow-wrap: anywhere; font-family: "Barlow Condensed"; font-size: clamp(25px, 2.4vw, 36px); letter-spacing: -0.02em; }
 .share-card small { display: block; margin-top: 4px; color: var(--muted); font-weight: 900; }
 .share-card em { display: grid; place-items: center; flex: 0 0 62px; min-width: 62px; height: 62px; border-radius: 50%; background: var(--navy-2); border: 1px solid var(--line); color: var(--orange); font-style: normal; font-weight: 900; text-transform: uppercase; }
 .bars { display: grid; gap: 12px; }
@@ -160,7 +164,7 @@ th { color: #ffb36b; font-family: "Barlow Condensed"; font-size: 14px; text-tran
 
 @media (max-width: 900px) {
   .toolbar, .metrics, .metrics-six, .grid, .grid-three { grid-template-columns: 1fr; }
-  .share-cards { grid-template-columns: 1fr; }
+  .share-cards, .profit-cards, .partner-cards { grid-template-columns: 1fr; }
   .top-nav { align-items: flex-start; }
   .nav-menu { justify-content: flex-start; }
   .shell { width: min(100% - 20px, 1220px); padding-top: 12px; }

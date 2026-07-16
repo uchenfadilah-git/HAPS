@@ -86,12 +86,10 @@
       <section class="panel table-panel"><div class="panel-head"><div><p class="eyebrow">Permodalan</p><h2>Partner Capital Ledger</h2></div></div><div class="table-wrap"><table><thead><tr><th>Partner</th><th>Date</th><th>Keterangan</th><th>Pemasukan</th><th>Pengeluaran</th><th>Saldo</th></tr></thead><tbody id="partnerTable"></tbody></table></div></section>
     </section>
 
-    <section id="sharePage" class="page-view">
-      <section class="grid">
-        <article class="panel share-panel"><div class="panel-head"><div><p class="eyebrow">Hak Profit</p><h2>Simulasi Profit 30/30/30/10</h2></div><span id="shareBase" class="pill">Dari net profit</span></div><div id="shareCards" class="share-cards"></div></article>
-        <article class="panel share-panel"><div class="panel-head"><div><p class="eyebrow">Beban Cost</p><h2>Cost Share 3 Partner</h2></div><span id="costBase" class="pill">Dari COST + fallback</span></div><div id="costCards" class="share-cards three"></div></article>
-      </section>
-      <section class="panel share-panel"><div class="panel-head"><div><p class="eyebrow">Tanpa Sheet Baru</p><h2>Estimasi Posisi Partner</h2></div><span id="partnerPositionNote" class="pill">Virtual ledger</span></div><p class="subtitle cost-note">Dihitung dari sheet yang sudah ada: saldo Permodalan - beban Cost + hak Profit. Ini estimasi posisi, bukan bukti pembayaran profit real.</p><div id="partnerPositionCards" class="share-cards three"></div></section>
+    <section id="sharePage" class="page-view share-page">
+      <section class="panel share-panel"><div class="panel-head"><div><p class="eyebrow">Hak Profit</p><h2>Simulasi Profit 30/30/30/10</h2></div><span id="shareBase" class="pill">Dari net profit</span></div><div id="shareCards" class="share-cards profit-cards"></div></section>
+      <section class="panel share-panel"><div class="panel-head"><div><p class="eyebrow">Beban Cost</p><h2>Cost Share 3 Partner</h2></div><span id="costBase" class="pill">Dari COST + fallback</span></div><div id="costCards" class="share-cards partner-cards"></div></section>
+      <section class="panel share-panel"><div class="panel-head"><div><p class="eyebrow">Tanpa Sheet Baru</p><h2>Estimasi Posisi Partner</h2></div><span id="partnerPositionNote" class="pill">Virtual ledger</span></div><p class="subtitle cost-note">Dihitung dari sheet yang sudah ada: saldo Permodalan - beban Cost + hak Profit. Ini estimasi posisi, bukan bukti pembayaran profit real.</p><div id="partnerPositionCards" class="share-cards partner-cards"></div></section>
       <section class="panel table-panel"><div class="panel-head"><div><p class="eyebrow">Cost Detail</p><h2>Buying + Delivery Split</h2></div></div><div class="table-wrap"><table><thead><tr><th>Code</th><th>Tracking</th><th>Buying</th><th>Delivery</th><th>Yusuf</th><th>Shafi</th><th>Husein</th><th>Source</th></tr></thead><tbody id="costTable"></tbody></table></div></section>
     </section>
 
